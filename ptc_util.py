@@ -576,9 +576,7 @@ def get_all_descriptors(mol_list, radius, fp_size, descriptor_sel, reduced=True,
         X = X_DESC_2D
 
     X.columns = X.columns.astype(str) 
-
-
-    st.dataframe(X)
+    # st.dataframe(X)
     return X
 
 def get_classification_report(y_test, y_pred):

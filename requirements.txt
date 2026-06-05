@@ -6,4 +6,5 @@ boto3==1.42.83
 rdkit==2025.9.6
 scikit-learn==1.8.0 
 matplotlib==3.10.8 
+iterative-stratification
 torch  
