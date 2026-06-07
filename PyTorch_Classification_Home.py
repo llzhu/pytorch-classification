@@ -23,7 +23,7 @@ env = Env(  st.secrets['src_data'],
 
 app_header()
 
-study, X_desc, excluded_list, exclusion_seed, excluded_pct, new_model = app_setup() 
+study, X_desc, excluded_list, exclusion_seed, excluded_pct, new_model, algorithm_container = app_setup() 
 
 st.session_state['new_model'] = new_model
 st.session_state['env'] = env
@@ -54,6 +54,7 @@ algorithm = MODEL_SINGLE   # Default - single task
 if study == TOX21:
 
     algorithm = MODEL_MULTI
+    algorithm_container.write(algorithm)
 
     classes = ['NR-AR', 'NR-AR-LBD', 'NR-AhR', 'NR-Aromatase','NR-ER', 'NR-ER-LBD', 'NR-PPAR-gamma',
                'SR-ARE', 'SR-ATAD5', 'SR-HSE', 'SR-MMP', 'SR-p53']
@@ -64,6 +65,8 @@ if study == TOX21:
     df_g = df_g.rename(columns={'Title': COMPOUND_ID,})
     
 elif study == TOX21_NR_AHR:
+
+    algorithm_container.write(algorithm)
     classes = ['NR-AhR']
     df_g =  get_df_from_s3csv(env.s3_bucket, f'{env.src_data}/tox21_nr_ahr.csv')
 
@@ -138,7 +141,7 @@ st.session_state['dataset'] = dataset
 
 c_data, c_fig = st.columns(2)
 with c_data:
-    # st.write('All Feature Shapes = ', X.shape)
+    st.write('All Feature Shapes = ', X.shape)
     st.dataframe(df_g)
 
 with c_fig:

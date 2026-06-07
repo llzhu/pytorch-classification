@@ -1,8 +1,10 @@
 import streamlit as st
 from ptc_util import *
 import plotly.express as px
-
-
+from sklearn.metrics import roc_auc_score, average_precision_score, f1_score, accuracy_score
+from sklearn.metrics import classification_report,  ConfusionMatrixDisplay
+import matplotlib.pyplot as plt
+import io
     
 def app_header():
     st.subheader(f'PyTorch Classification in Drug Discovery.')
@@ -18,27 +20,32 @@ def app_header():
         st.write('***')
     
 def app_setup():
-    sel1, sel2, sel4 = st. columns([2,2,3])
+    sel1, sel2, sel3, sel4, sel5 = st. columns([4,3,2,3,3])
+
     with sel1:  # Studies/Datasets
         study = st.selectbox('Pick a dataset', STUDY_OPTIONS)
+        st.write("***")
+        go_container = st.container()
     with sel2:  # Discriptoes/FP
         X_desc = st.radio('Features:', FEATURE_OPTIONS)
-    # with sel3:   # pick a algorithm
-    #     algorithm = st.radio(f'Select a Classification Algorithm:', options=MODEL_OPTIONS, horizontal=True)
+    with sel3:   # pick a algorithm
+        st.write("DNN Model:")
+        algorithm_container = st.container()
     with sel4:   # exclusions
         list_to_exclude = st.text_area('Exclude the following in the model training:')
         excluded_list = get_list(list_to_exclude) if list_to_exclude else []
+    with sel5:
         exclusion_seed = st.text_input("Seed for randomly excluded list (int):", value='42')
         excluded_pct = st.text_input("Percentage for randomly excluded list (int):")
-    st.write('***')
+   
 
-    new_or_existing = st.radio('New model or using existing model?', ['Work with an Existing Model', 'Create New Model'], 
+    new_or_existing = go_container.radio('New model or using existing model?', ['Work with an Existing Model', 'Create New Model'], 
                                horizontal=True, disabled=study=='--')
     new_model = new_or_existing == 'Create New Model'
   
     st.write('***')
 
-    return study, X_desc, excluded_list, exclusion_seed, excluded_pct, new_model
+    return study, X_desc, excluded_list, exclusion_seed, excluded_pct, new_model, algorithm_container
 
 def side_data_file_upload(warning_container=None):
     uploaded_data_file = None
@@ -167,3 +174,92 @@ def fig_df_structure(df, expt_label, pred_label, df_container, mol_container, hi
 
     else:
         df_container.dataframe(df, hide_index=True)
+
+def st_multitask_results_single(all_preds, all_targets, classes, task_idx):
+    y_true_tensor = torch.tensor(all_targets[:, task_idx])
+    y_pred_tensor = torch.tensor(all_preds[:, task_idx])
+        
+    # CRITICAL STEP: Create a mask to filter out missing labels (-1 or nan)
+    # valid_mask = (y_true != -1)
+    valid_mask = (~torch.isnan(y_true_tensor))
+        
+
+    y_true_filtered = y_true_tensor[valid_mask].numpy()
+    y_pred_filtered = y_pred_tensor[valid_mask].numpy()
+    y_pred_binary = (y_pred_filtered >= 0.5).astype(int)  
+
+    # Check if the filtered task has both active (1) and inactive (0) classes
+    # ROC-AUC cannot be calculated if only one class is present in the test slice
+    if len(np.unique(y_true_filtered)) < 2:
+        st.write(f"\n[Task {classes[task_idx]}] Skipped: Only one class present in valid test samples.")
+        st.stop()
+            
+    # Compute ROC-AUC score using predicted probabilities
+    auc = roc_auc_score(y_true_filtered, y_pred_filtered)
+    
+    roc_auc = round(roc_auc_score(y_true_filtered, y_pred_filtered), 3)
+    pr_auc = round(average_precision_score(y_true_filtered, y_pred_filtered),3)
+    accuracy = round(accuracy_score(y_true_filtered, y_pred_binary), 3)
+
+    c1, c2 = st.columns(2)
+    with c1:
+        st.write(f'roc_auc = {roc_auc} | pr_auc = {pr_auc} | accuracy = {accuracy}')
+
+        report = get_classification_report(y_true_filtered, y_pred_binary)
+
+        del report['accuracy']
+        st.dataframe(report.transpose())
+
+    with c2:
+        fig, ax = plt.subplots(figsize=(5, 2.5),  layout="constrained")
+        ConfusionMatrixDisplay.from_predictions(y_true_filtered, y_pred_binary, labels=None, display_labels=None, ax=ax, colorbar=True)
+        buf = io.BytesIO()
+        fig.savefig(buf, format="png")
+        st.image(buf)
+
+        
+       
+        
+
+
+def st_multitask_results(all_preds, all_targets, classes):
+    # num_tasks = len(classes)
+    ic(classes)
+    tab1,tab2,tab3,tab4,tab5,tab6,tab7,tab8,tab9,tab10,tab11,tab12 = st.tabs(classes)
+
+    with tab1:
+        task_idx = 0
+        st_multitask_results_single(all_preds, all_targets, classes, task_idx)
+    with tab2:
+        task_idx = 1
+        st_multitask_results_single(all_preds, all_targets, classes, task_idx)
+    with tab3:
+        task_idx = 2
+        st_multitask_results_single(all_preds, all_targets, classes, task_idx)
+    with tab4:
+        task_idx = 3
+        st_multitask_results_single(all_preds, all_targets, classes, task_idx)
+    with tab5:
+        task_idx = 4
+        st_multitask_results_single(all_preds, all_targets, classes, task_idx)
+    with tab6:
+        task_idx = 5
+        st_multitask_results_single(all_preds, all_targets, classes, task_idx)
+    with tab7:
+        task_idx = 6
+        st_multitask_results_single(all_preds, all_targets, classes, task_idx)
+    with tab8:
+        task_idx = 7
+        st_multitask_results_single(all_preds, all_targets, classes, task_idx)
+    with tab9:
+        task_idx = 8
+        st_multitask_results_single(all_preds, all_targets, classes, task_idx)
+    with tab10:
+        task_idx = 9
+        st_multitask_results_single(all_preds, all_targets, classes, task_idx)
+    with tab11:
+        task_idx = 10
+        st_multitask_results_single(all_preds, all_targets, classes, task_idx)
+    with tab12:
+        task_idx = 11
+        st_multitask_results_single(all_preds, all_targets, classes, task_idx)

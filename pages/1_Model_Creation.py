@@ -1,11 +1,11 @@
 import streamlit as st
 import numpy as np
-from sklearn.metrics import root_mean_squared_error, r2_score
 from sklearn.metrics import roc_auc_score, average_precision_score, f1_score, accuracy_score
 from sklearn.metrics import classification_report,  ConfusionMatrixDisplay
 from torch.utils.data import TensorDataset, Subset, DataLoader
 import matplotlib.pyplot as plt
 from ptc_util import *
+from ptc_comp import *
 from sklearn.model_selection import ShuffleSplit, StratifiedShuffleSplit
 from iterstrat.ml_stratifiers import MultilabelStratifiedShuffleSplit
 from timeit import default_timer as timer
@@ -47,6 +47,7 @@ if 'dataset' in st.session_state:
 
 
 class_name = model_desc.class_name
+classes = app_vars.classes
 model = model_desc.model
 X_tensor, y_tensor = dataset.tensors
 
@@ -55,6 +56,7 @@ col1, col2, col3, col4, col5 = st.columns(5)
 
 with col1:
     epochs = st.text_input('Epochs:', value='100')
+    exe_container = st.container()
 with col2:
     batch_size = st.text_input('Batch Size:', value='32')
 with col3:
@@ -67,7 +69,7 @@ with col5:
     
 
 
-go = st.button('Create a new model!')
+go = exe_container.button('Create a new model!')
 
 if not go:
     st.stop()
@@ -79,11 +81,7 @@ summery_empty.progress(0.01)
 summary_container = st.container()
 
 
-
-st.write(f'Detailed R2 scores and Root mean square error for different train/test selections')
-
 sss = None
-
 if class_name == MODEL_SINGLE:
     sss= StratifiedShuffleSplit(
         n_splits=int(n_splits),
@@ -103,6 +101,7 @@ y_np_filled = np.nan_to_num(y_np, nan=0.0)
 
 for split_idx, (train_idx, test_idx) in enumerate(sss.split(X_np, y_np_filled)):
 
+
     # Create subsets for this specific fold
     train_subset = Subset(dataset, train_idx)
     test_subset = Subset(dataset, test_idx)      
@@ -113,9 +112,6 @@ for split_idx, (train_idx, test_idx) in enumerate(sss.split(X_np, y_np_filled)):
     y_test_tensor = test_subset.dataset.tensors[1][test_subset.indices]
 
     
-
-    st.write(f"Split {split_idx+1} -----------------------------------")
-    
     if class_name == MODEL_SINGLE:
         criterion = nn.BCEWithLogitsLoss(pos_weight=torch.tensor(int(pos_weight)))
         optimizer = torch.optim.Adam(model.parameters(), lr=float(lr))
@@ -124,40 +120,36 @@ for split_idx, (train_idx, test_idx) in enumerate(sss.split(X_np, y_np_filled)):
 
         model.eval()
         with torch.no_grad():
-            y_train_pred = model(X_train_tensor)
+            # y_train_pred = model(X_train_tensor)
             y_test_pred = model(X_test_tensor)
           
-        probs = torch.sigmoid(y_test_pred).detach().numpy()
-        # ic(probs)
-        roc_auc = roc_auc_score(y_test_tensor, probs)
-        pr_auc = average_precision_score(y_test_tensor, probs)
-
-        preds = (probs > 0.5).astype(int)
-
-        # f1 = f1_score(y_test_tensor, preds)
-        accuracy = accuracy_score(y_test_tensor, preds)
-
-        st.write(f'roc_auc = {roc_auc}')
-        st.write(f'pr_auc = {pr_auc}')
-        st.write(f'accuracy = {accuracy}')
+        
 
 
         c1, c2 = st.columns(2)
         with c1:
+            probs = torch.sigmoid(y_test_pred).detach().numpy()
+            preds = (probs > 0.5).astype(int)
+        
+            roc_auc = round(roc_auc_score(y_test_tensor, probs), 3)
+            pr_auc = round(average_precision_score(y_test_tensor, probs),3)
+            accuracy = round(accuracy_score(y_test_tensor, preds), 3)
+
+            st.write(f'roc_auc = {roc_auc} | pr_auc = {pr_auc} | accuracy = {accuracy}')
+
             report = get_classification_report(y_test_tensor.numpy(), preds)
 
-            report = report.rename(columns = {'0.0':'0', '1.0':'1'})
             del report['accuracy']
             st.dataframe(report.transpose())
 
 
         with c2:
-            fig, ax = plt.subplots(figsize=(3, 2))
-            ConfusionMatrixDisplay.from_predictions(y_test_tensor.numpy(), preds, labels=None, ax=ax, colorbar=True)
+            fig, ax = plt.subplots(figsize=(5, 2.5),  layout="constrained")
+            ConfusionMatrixDisplay.from_predictions(y_test_tensor.numpy(), preds, labels=None, display_labels=None, ax=ax, colorbar=True)
             buf = io.BytesIO()
             fig.savefig(buf, format="png")
             st.image(buf)
-            st.write('Confusion Matrix. X - Prediction; Y - Actual')
+            # st.write('Confusion Matrix. X - Prediction; Y - Actual')
 
     elif class_name == MODEL_MULTI:
         
@@ -178,10 +170,15 @@ for split_idx, (train_idx, test_idx) in enumerate(sss.split(X_np, y_np_filled)):
           
         probs = torch.sigmoid(y_test_pred).detach().numpy()
         
-        test_dataloader = DataLoader(dataset, batch_size=int(batch_size), shuffle=False)
-        evaluate_multitask_model(model, test_dataloader, device, num_tasks=12)
-    
+        test_dataset = TensorDataset(X_test_tensor, y_test_tensor)
+        test_dataloader = DataLoader(test_dataset, shuffle=False)
+        
+        all_preds, all_targets = evaluate_multitask_model(model, test_dataloader, device, classes)
 
+        # display_multitask_results(all_preds, all_targets, classes)
+        st_multitask_results(all_preds, all_targets, classes)
+    
+    summery_empty.progress((split_idx+1)/int(n_splits))
     st.write('***')
    
 end = timer()

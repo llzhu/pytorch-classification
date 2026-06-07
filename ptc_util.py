@@ -369,7 +369,9 @@ def torch_train_batch(model, criterion, optimizer, epochs, dataset, batch_size):
 
 
 
-def evaluate_multitask_model(model, dataloader, device, num_tasks=12):
+def evaluate_multitask_model(model, dataloader, device, classes):
+
+    num_tasks = len(classes)
     model.eval()  # Set model to evaluation mode (disables dropout/batchnorm updates)
     
     all_preds = []
@@ -385,20 +387,25 @@ def evaluate_multitask_model(model, dataloader, device, num_tasks=12):
             
             # Convert raw logits to probabilities using Sigmoid
             probs = torch.sigmoid(logits)
+            # ic(probs)
             
             all_preds.append(probs.cpu().numpy())
             all_targets.append(batch_targets.numpy())
+
+    # ic(all_preds)
             
     # Concatenate lists into large NumPy arrays of shape (total_samples, num_tasks)
     all_preds = np.vstack(all_preds)
     all_targets = np.vstack(all_targets)
+
+    return all_preds, all_targets
+
+def display_multitask_results(all_preds, all_targets, classes):
+
+    num_tasks = len(classes)
     
     # 2. Iterate through each task to calculate individual performance metrics
     task_auc_scores = {}
-    
-    print("=" * 60)
-    print("     TOX21 PER-TASK EVALUATION REPORT")
-    print("=" * 60)
     
     for task_idx in range(num_tasks):
         # Extract predictions and targets for the current task
@@ -411,7 +418,7 @@ def evaluate_multitask_model(model, dataloader, device, num_tasks=12):
         # ic(valid_mask)
 
         y_true_filtered = y_true_tensor[valid_mask].numpy()
-        y_pred_filtered = y_true_tensor[valid_mask].numpy()
+        y_pred_filtered = y_pred_tensor[valid_mask].numpy()
         
         # Check if the filtered task has both active (1) and inactive (0) classes
         # ROC-AUC cannot be calculated if only one class is present in the test slice
@@ -428,7 +435,7 @@ def evaluate_multitask_model(model, dataloader, device, num_tasks=12):
         y_pred_binary = (y_pred_filtered >= 0.5).astype(int)
         
         # Print metrics
-        print(f"\n👉 TASK {task_idx} | ROC-AUC: {auc:.4f}")
+        print(f"\n👉 TASK {classes[task_idx]} | ROC-AUC: {auc:.4f}")
         print("-" * 50)
         print(classification_report(y_true_filtered, y_pred_binary, target_names=["Inactive (0)", "Active (1)"]))
         
@@ -581,10 +588,8 @@ def get_all_descriptors(mol_list, radius, fp_size, descriptor_sel, reduced=True,
 
 def get_classification_report(y_test, y_pred):
     from sklearn import metrics
-    report = metrics.classification_report(y_test, y_pred, output_dict=True)
-    print(report)
+    report = metrics.classification_report(y_test, y_pred, target_names=["Inactive (0)", "Active (1)"], output_dict=True )
     df_classification_report = pd.DataFrame(report)
-    
     return df_classification_report
 
 @st.cache_data
