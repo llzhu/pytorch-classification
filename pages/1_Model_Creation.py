@@ -16,7 +16,7 @@ import io
 # device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 device = 'cpu'
 
-start = timer()
+# start = timer()
 
 if 'new_model' in st.session_state:
     new_model = st.session_state['new_model']
@@ -75,10 +75,8 @@ if not go:
     st.stop()
 
 
-st.write(f"Overall Prediction Accuracy of {class_name} on {app_vars.study} using {model_desc.X_desc} as features:")
 summery_empty = st.empty()
 summery_empty.progress(0.01)
-summary_container = st.container()
 
 
 sss = None
@@ -180,5 +178,7 @@ for split_idx, (train_idx, test_idx) in enumerate(sss.split(X_np, y_np_filled)):
     
     summery_empty.progress((split_idx+1)/int(n_splits))
     st.write('***')
-   
-end = timer()
+
+ 
+
+# end = timer()
