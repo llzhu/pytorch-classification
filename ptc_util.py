@@ -99,7 +99,19 @@ FEATURE_OPTIONS = [FP_ONLY, ADD_RDKIT_DESCRIPTORS, RDKIT_DESCRIPTORS_ONLY]
 
 # Studies/dataset
 TOX21 = 'Tox21'
+TOX21_NR_AR = 'Tox21_NR-AR'
+TOX21_NR_AR_LBD = 'Tox21_NR-AR-LBD'
 TOX21_NR_AHR = 'Tox21_NR-AhR'
+TOX21_NR_AROMATASE = 'Tox21_NR-Aromatase'
+TOX21_NR_ER = 'Tox21_NR-ER'
+TOX21_NR_ER_LBD = 'Tox21_NR-ER-LBD'
+TOX21_NR_PPAR_GAMMA = 'Tox21_NR-PPAR-gamma'
+TOX21_SR_ARE = 'Tox21_SR-ARE'
+TOX21_SR_ATAD5 = 'Tox21_SR-ATAD5'
+TOX21_SR_HSE = 'Tox21_SR-HSE'
+TOX21_SR_MMP = 'Tox21_SR-MMP'
+TOX21_SR_P53 = 'Tox21_SR-p53'
+
 AD_HOC = 'ad_hoc'
 TOX21_ALL_CLASSES = ['NR-AR', 'NR-AR-LBD', 'NR-AhR', 'NR-Aromatase','NR-ER', 'NR-ER-LBD', 'NR-PPAR-gamma',
                     'SR-ARE', 'SR-ATAD5', 'SR-HSE', 'SR-MMP', 'SR-p53']
@@ -116,7 +128,8 @@ TOX21_DICT = {'NR-AR':0,
               'SR-MMP':10, 
               'SR-p53':11}
 
-STUDY_OPTIONS = ['--', TOX21, TOX21_NR_AHR, AD_HOC]
+STUDY_OPTIONS = ['--', TOX21, TOX21_NR_AR, TOX21_NR_AR_LBD, TOX21_NR_AHR, TOX21_NR_AROMATASE, TOX21_NR_ER, TOX21_NR_ER_LBD,
+                    TOX21_NR_PPAR_GAMMA, TOX21_SR_ARE, TOX21_SR_ATAD5, TOX21_SR_HSE, TOX21_SR_MMP, TOX21_SR_P53, AD_HOC]
 
 RADIUS = 3 
 FP_SIZE = 4096
@@ -459,6 +472,13 @@ def display_multitask_results(all_preds, all_targets, classes):
     print("=" * 60)
     
     return task_auc_scores
+
+def get_tox21_df(classes, csv_name, env, container, model_class):
+    container.write(f'The DNN is overwritten to {model_class}')
+    df_g =  get_df_from_s3csv(env.s3_bucket, f'{env.src_data}/{csv_name}')
+    df_g = df_g[['Title', 'SMILES'] + classes]      
+    df_g = df_g.rename(columns={'Title': COMPOUND_ID,})
+    return df_g
 
 @st.cache_data
 def standarize(df_input: pd.DataFrame, study:str, value_column:str, apply_log:bool)-> tuple[pd.DataFrame, str]:

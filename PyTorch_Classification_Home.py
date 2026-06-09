@@ -53,27 +53,45 @@ classes = []
 
 algorithm = MODEL_SINGLE   # Default - single task
 if study == TOX21:
-
     algorithm = MODEL_MULTI
-    algorithm_container.write(f'The DNN is overwritten to {algorithm}')
-
     classes = TOX21_ALL_CLASSES
-
-    df_g =  get_df_from_s3csv(env.s3_bucket, f'{env.src_data}/tox21_single_organic_nn.csv')
-
-    df_g = df_g[['Title', 'SMILES'] + classes]
-            
-    df_g = df_g.rename(columns={'Title': COMPOUND_ID,})
-    
+    df_g = get_tox21_df(classes, 'tox21_single_organic_nn.csv', env, algorithm_container, algorithm)
+elif study == TOX21_NR_AR:
+    classes = ['NR-AR']
+    df_g = get_tox21_df(classes, 'tox21_nr_ar.csv', env, algorithm_container, algorithm)
+elif study == TOX21_NR_AR_LBD:
+    classes = ['NR-AR-LBD']
+    df_g = get_tox21_df(classes, 'tox21_nr_ar_lbd.csv', env, algorithm_container, algorithm)  
 elif study == TOX21_NR_AHR:
-
-    algorithm_container.write(f'The DNN is overwritten to {algorithm}')
-    classes = ['NR-AhR']
-    df_g =  get_df_from_s3csv(env.s3_bucket, f'{env.src_data}/tox21_nr_ahr.csv')
-
-    df_g = df_g[['Title', 'SMILES'] + classes]
-            
-    df_g = df_g.rename(columns={'Title': COMPOUND_ID,})
+    classes = ['NR-AR-AhR']
+    df_g = get_tox21_df(classes, 'tox21_nr_ahr.csv', env, algorithm_container, algorithm) 
+elif study == TOX21_NR_AROMATASE:
+    classes = ['NR-Aromatase']
+    df_g = get_tox21_df(classes, 'tox21_nr_aromatase.csv', env, algorithm_container, algorithm) 
+elif study == TOX21_NR_ER:
+    classes = ['NR-ER']
+    df_g = get_tox21_df(classes, 'tox21_nr_er.csv', env, algorithm_container, algorithm) 
+elif study == TOX21_NR_ER_LBD:
+    classes = ['NR-ER-LBD']
+    df_g = get_tox21_df(classes, 'tox21_nr_er_lbd.csv', env, algorithm_container, algorithm)  
+elif study == TOX21_NR_PPAR_GAMMA:
+    classes = ['NR-PPAR-gamma']
+    df_g = get_tox21_df(classes, 'tox21_nr_ppar_gamma.csv', env, algorithm_container, algorithm) 
+elif study == TOX21_SR_ARE:
+    classes = ['SR-ARE']
+    df_g = get_tox21_df(classes, 'tox21_sr_are.csv', env, algorithm_container, algorithm) 
+elif study == TOX21_SR_ATAD5:
+    classes = ['SR-ATAD5']
+    df_g = get_tox21_df(classes, 'tox21_sr_atad5.csv', env, algorithm_container, algorithm)
+elif study == TOX21_SR_HSE:
+    classes = ['SR-HSE']
+    df_g = get_tox21_df(classes, 'tox21_sr_hse.csv', env, algorithm_container, algorithm)
+elif study == TOX21_SR_MMP:
+    classes = ['SR-MMP']
+    df_g = get_tox21_df(classes, 'tox21_sr_mmp.csv', env, algorithm_container, algorithm)
+elif study == TOX21_SR_P53:
+    classes = ['SR-p53']
+    df_g = get_tox21_df(classes, 'tox21_sr_p53.csv', env, algorithm_container, algorithm)
 
 elif study == AD_HOC:
     df_g, expt_col_name = side_data_file_upload(warning_container=warning_container)
