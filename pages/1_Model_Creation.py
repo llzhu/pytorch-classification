@@ -46,7 +46,7 @@ if 'dataset' in st.session_state:
     dataset = st.session_state['dataset']
 
 
-class_name = model_desc.class_name
+model_class = model_desc.model_class
 classes = app_vars.classes
 model = model_desc.model
 X_tensor, y_tensor = dataset.tensors
@@ -80,13 +80,13 @@ summery_empty.progress(0.01)
 
 
 sss = None
-if class_name == MODEL_SINGLE:
+if model_class == MODEL_SINGLE:
     sss= StratifiedShuffleSplit(
         n_splits=int(n_splits),
         test_size=float(test_size),
         random_state=42
     )
-elif class_name == MODEL_MULTI:
+elif model_class == MODEL_MULTI:
     sss = MultilabelStratifiedShuffleSplit(
         n_splits=int(n_splits),
         test_size=float(test_size),
@@ -110,32 +110,35 @@ for split_idx, (train_idx, test_idx) in enumerate(sss.split(X_np, y_np_filled)):
     y_test_tensor = test_subset.dataset.tensors[1][test_subset.indices]
 
     
-    if class_name == MODEL_SINGLE:
+    if model_class == MODEL_SINGLE:
         criterion = nn.BCEWithLogitsLoss(pos_weight=torch.tensor(int(pos_weight)))
         optimizer = torch.optim.Adam(model.parameters(), lr=float(lr))
 
         torch_train_batch(model, criterion, optimizer, int(epochs), train_subset.dataset, int(batch_size))
 
         model.eval()
-        with torch.no_grad():
-            # y_train_pred = model(X_train_tensor)
-            y_test_pred = model(X_test_tensor)
+        # with torch.no_grad():
+        #     # y_train_pred = model(X_train_tensor)
+        #     y_test_pred = model(X_test_tensor)
           
+        test_dataset = TensorDataset(X_test_tensor, y_test_tensor)
+        test_dataloader = DataLoader(test_dataset, shuffle=False)
         
+        all_preds, all_targets = evaluate_model(model, test_dataloader, device, len(classes))
 
 
         c1, c2 = st.columns(2)
         with c1:
-            probs = torch.sigmoid(y_test_pred).detach().numpy()
-            preds = (probs > 0.5).astype(int)
+            
+            preds_binary = (all_preds > 0.5).astype(int)
         
-            roc_auc = round(roc_auc_score(y_test_tensor, probs), 3)
-            pr_auc = round(average_precision_score(y_test_tensor, probs),3)
-            accuracy = round(accuracy_score(y_test_tensor, preds), 3)
+            roc_auc = round(roc_auc_score(all_targets, all_preds), 3)
+            pr_auc = round(average_precision_score(all_targets, all_preds),3)
+            accuracy = round(accuracy_score(all_targets, preds_binary), 3)
 
             st.write(f'roc_auc = {roc_auc} | pr_auc = {pr_auc} | accuracy = {accuracy}')
 
-            report = get_classification_report(y_test_tensor.numpy(), preds)
+            report = get_classification_report(all_targets, preds_binary)
 
             del report['accuracy']
             st.dataframe(report.transpose())
@@ -143,13 +146,13 @@ for split_idx, (train_idx, test_idx) in enumerate(sss.split(X_np, y_np_filled)):
 
         with c2:
             fig, ax = plt.subplots(figsize=(5, 2.5),  layout="constrained")
-            ConfusionMatrixDisplay.from_predictions(y_test_tensor.numpy(), preds, labels=None, display_labels=None, ax=ax, colorbar=True)
+            ConfusionMatrixDisplay.from_predictions(all_targets, preds_binary, labels=None, display_labels=None, ax=ax, colorbar=True)
             buf = io.BytesIO()
             fig.savefig(buf, format="png")
             st.image(buf)
             # st.write('Confusion Matrix. X - Prediction; Y - Actual')
 
-    elif class_name == MODEL_MULTI:
+    elif model_class == MODEL_MULTI:
         
         criterion = MaskedBCEWithLogitsLoss(pos_weight=torch.tensor(int(pos_weight)))
         # criterion = masked_bce_loss_fn
@@ -162,23 +165,40 @@ for split_idx, (train_idx, test_idx) in enumerate(sss.split(X_np, y_np_filled)):
         torch_train_batch(model, criterion, optimizer, int(epochs), train_subset.dataset, int(batch_size))
 
         model.eval()
-        with torch.no_grad():
-            y_train_pred = model(X_train_tensor)
-            y_test_pred = model(X_test_tensor)
+        # with torch.no_grad():
+        #     y_train_pred = model(X_train_tensor)
+        #     y_test_pred = model(X_test_tensor)
           
-        probs = torch.sigmoid(y_test_pred).detach().numpy()
+        # probs = torch.sigmoid(y_test_pred).detach().numpy()
         
         test_dataset = TensorDataset(X_test_tensor, y_test_tensor)
         test_dataloader = DataLoader(test_dataset, shuffle=False)
         
-        all_preds, all_targets = evaluate_multitask_model(model, test_dataloader, device, classes)
+        all_preds, all_targets = evaluate_model(model, test_dataloader, device, len(classes))
 
-        # display_multitask_results(all_preds, all_targets, classes)
         st_multitask_results(all_preds, all_targets, classes)
     
     summery_empty.progress((split_idx+1)/int(n_splits))
     st.write('***')
 
- 
+# Train with the whole dataset and save it to S3
+if model_class == MODEL_SINGLE:
+    criterion = nn.BCEWithLogitsLoss(pos_weight=torch.tensor(int(pos_weight)))
+
+elif model_class == MODEL_MULTI:
+    criterion = MaskedBCEWithLogitsLoss(pos_weight=torch.tensor(int(pos_weight)))
+
+optimizer = torch.optim.Adam(model.parameters(), lr=float(lr))
+torch_train_batch(model, criterion, optimizer, int(epochs), dataset, int(batch_size))
+
+
+model_desc.model = model   # populate model_desc with trained model
+
+key_prefix = f'{env.app_data}/{app_vars.study}/{model_class}/{model_desc.X_desc}'
+key_model_desc = f'{key_prefix}/model_desc.pkl'
+pickle_to_s3(model_desc, env.s3_bucket, key_model_desc)
+key_app_vars = f'{key_prefix}/app_vars.pkl'
+pickle_to_s3(app_vars, env.s3_bucket, key_app_vars)
+
 
 # end = timer()

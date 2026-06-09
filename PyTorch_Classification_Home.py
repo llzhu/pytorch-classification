@@ -3,7 +3,8 @@ import streamlit as st
 import plotly.figure_factory as ff
 from rdkit import Chem
 from sklearn import preprocessing
-from sklearn.model_selection import ShuffleSplit
+from sklearn.model_selection import ShuffleSplit, StratifiedShuffleSplit
+from iterstrat.ml_stratifiers import MultilabelStratifiedShuffleSplit
 from torch.utils.data import TensorDataset, DataLoader 
 from ptc_util import *
 from ptc_comp import *
@@ -23,7 +24,7 @@ env = Env(  st.secrets['src_data'],
 
 app_header()
 
-study, X_desc, excluded_list, exclusion_seed, excluded_pct, new_model, algorithm_container = app_setup() 
+study, X_desc, algorithm, excluded_list, exclusion_seed, excluded_pct, new_model, algorithm_container = app_setup() 
 
 st.session_state['new_model'] = new_model
 st.session_state['env'] = env
@@ -37,7 +38,7 @@ if study == '--':
 if not new_model:
     # These basic data are still need to properly load the existing models
     app_vars = AppVars(study=study)
-    model_desc = ModelDesc(X_desc=X_desc)
+    model_desc = ModelDesc(X_desc=X_desc, model_class=algorithm, model=model)
     st.session_state['app_vars'] = app_vars   
     st.session_state['model_desc'] = model_desc
 
@@ -54,10 +55,10 @@ algorithm = MODEL_SINGLE   # Default - single task
 if study == TOX21:
 
     algorithm = MODEL_MULTI
-    algorithm_container.write(algorithm)
+    algorithm_container.write(f'The DNN is overwritten to {algorithm}')
 
-    classes = ['NR-AR', 'NR-AR-LBD', 'NR-AhR', 'NR-Aromatase','NR-ER', 'NR-ER-LBD', 'NR-PPAR-gamma',
-               'SR-ARE', 'SR-ATAD5', 'SR-HSE', 'SR-MMP', 'SR-p53']
+    classes = TOX21_ALL_CLASSES
+
     df_g =  get_df_from_s3csv(env.s3_bucket, f'{env.src_data}/tox21_single_organic_nn.csv')
 
     df_g = df_g[['Title', 'SMILES'] + classes]
@@ -66,7 +67,7 @@ if study == TOX21:
     
 elif study == TOX21_NR_AHR:
 
-    algorithm_container.write(algorithm)
+    algorithm_container.write(f'The DNN is overwritten to {algorithm}')
     classes = ['NR-AhR']
     df_g =  get_df_from_s3csv(env.s3_bucket, f'{env.src_data}/tox21_nr_ahr.csv')
 
@@ -79,8 +80,13 @@ elif study == AD_HOC:
     
 df_ex = None
 if excluded_pct and int(excluded_pct) > 0:
-    ss = ShuffleSplit(n_splits=1, test_size=int(excluded_pct)/100.0, random_state=int(exclusion_seed))
-    for train_index, test_index in ss.split(df_g):
+    # ss = ShuffleSplit(n_splits=1, test_size=int(excluded_pct)/100.0, random_state=int(exclusion_seed))
+    if algorithm == MODEL_SINGLE:
+        sss = StratifiedShuffleSplit(n_splits=1, test_size=int(excluded_pct)/100.0, random_state=int(exclusion_seed))
+    elif algorithm == MODEL_MULTI:
+        sss = MultilabelStratifiedShuffleSplit(n_splits=1, test_size=int(excluded_pct)/100.0, random_state=int(exclusion_seed))
+
+    for train_index, test_index in sss.split(X=df_g[SMILES].to_numpy(), y=df_g[classes].to_numpy()):
         df_ex = df_g.iloc[test_index]
         df_g = df_g.iloc[train_index]
         

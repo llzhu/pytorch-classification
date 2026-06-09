@@ -20,7 +20,7 @@ def app_header():
         st.write('***')
     
 def app_setup():
-    sel1, sel2, sel3, sel4, sel5 = st. columns([4,3,2,3,3])
+    sel1, sel2, sel3, sel4, sel5 = st. columns([4,3,3,3,3])
 
     with sel1:  # Studies/Datasets
         study = st.selectbox('Pick a dataset', STUDY_OPTIONS)
@@ -30,6 +30,7 @@ def app_setup():
         X_desc = st.radio('Features:', FEATURE_OPTIONS)
     with sel3:   # pick a algorithm
         st.write("DNN Model:")
+        algorithm = st.radio(f'Select a Classification Algorithm:', options=MODEL_OPTIONS, horizontal=True)
         algorithm_container = st.container()
     with sel4:   # exclusions
         list_to_exclude = st.text_area('Exclude the following in the model training:')
@@ -45,7 +46,7 @@ def app_setup():
   
     st.write('***')
 
-    return study, X_desc, excluded_list, exclusion_seed, excluded_pct, new_model, algorithm_container
+    return study, X_desc, algorithm, excluded_list, exclusion_seed, excluded_pct, new_model, algorithm_container
 
 def side_data_file_upload(warning_container=None):
     uploaded_data_file = None
@@ -175,6 +176,30 @@ def fig_df_structure(df, expt_label, pred_label, df_container, mol_container, hi
     else:
         df_container.dataframe(df, hide_index=True)
 
+
+def st_result_matrix(y_true, preds):
+
+    preds_binary = (preds > 0.5).astype(int)
+
+    roc_auc = round(roc_auc_score(y_true, preds), 3)
+    pr_auc = round(average_precision_score(y_true, preds),3)
+    accuracy = round(accuracy_score(y_true, preds_binary), 3)
+
+    st.write(f'roc_auc = {roc_auc} | pr_auc = {pr_auc} | accuracy = {accuracy}')
+
+    report = get_classification_report(y_true, preds_binary)
+
+    del report['accuracy']
+    st.dataframe(report.transpose())
+
+def st_confusion_matrix(y_true, preds):
+    preds_binary = (preds > 0.5).astype(int)
+    fig, ax = plt.subplots(figsize=(5, 2.5),  layout="constrained")
+    ConfusionMatrixDisplay.from_predictions(y_true, preds_binary, labels=None, display_labels=None, ax=ax, colorbar=True)
+    buf = io.BytesIO()
+    fig.savefig(buf, format="png")
+    st.image(buf)
+
 def st_multitask_results_single(all_preds, all_targets, classes, task_idx):
     y_true_tensor = torch.tensor(all_targets[:, task_idx])
     y_pred_tensor = torch.tensor(all_preds[:, task_idx])
@@ -194,28 +219,30 @@ def st_multitask_results_single(all_preds, all_targets, classes, task_idx):
         st.write(f"\n[Task {classes[task_idx]}] Skipped: Only one class present in valid test samples.")
         st.stop()
             
-    # Compute ROC-AUC score using predicted probabilities
-    auc = roc_auc_score(y_true_filtered, y_pred_filtered)
     
-    roc_auc = round(roc_auc_score(y_true_filtered, y_pred_filtered), 3)
-    pr_auc = round(average_precision_score(y_true_filtered, y_pred_filtered),3)
-    accuracy = round(accuracy_score(y_true_filtered, y_pred_binary), 3)
+    # roc_auc = round(roc_auc_score(y_true_filtered, y_pred_filtered), 3)
+    # pr_auc = round(average_precision_score(y_true_filtered, y_pred_filtered),3)
+    # accuracy = round(accuracy_score(y_true_filtered, y_pred_binary), 3)
 
     c1, c2 = st.columns(2)
     with c1:
-        st.write(f'roc_auc = {roc_auc} | pr_auc = {pr_auc} | accuracy = {accuracy}')
+        # st.write(f'roc_auc = {roc_auc} | pr_auc = {pr_auc} | accuracy = {accuracy}')
 
-        report = get_classification_report(y_true_filtered, y_pred_binary)
+        # report = get_classification_report(y_true_filtered, y_pred_binary)
 
-        del report['accuracy']
-        st.dataframe(report.transpose())
+        # del report['accuracy']
+        # st.dataframe(report.transpose())
+        st_result_matrix(y_true_filtered, y_pred_filtered)
+
 
     with c2:
-        fig, ax = plt.subplots(figsize=(5, 2.5),  layout="constrained")
-        ConfusionMatrixDisplay.from_predictions(y_true_filtered, y_pred_binary, labels=None, display_labels=None, ax=ax, colorbar=True)
-        buf = io.BytesIO()
-        fig.savefig(buf, format="png")
-        st.image(buf)
+        # fig, ax = plt.subplots(figsize=(5, 2.5),  layout="constrained")
+        # ConfusionMatrixDisplay.from_predictions(y_true_filtered, y_pred_binary, labels=None, display_labels=None, ax=ax, colorbar=True)
+        # buf = io.BytesIO()
+        # fig.savefig(buf, format="png")
+        # st.image(buf)
+
+        st_confusion_matrix(y_true_filtered, y_pred_filtered)
 
         
        

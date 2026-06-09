@@ -101,6 +101,20 @@ FEATURE_OPTIONS = [FP_ONLY, ADD_RDKIT_DESCRIPTORS, RDKIT_DESCRIPTORS_ONLY]
 TOX21 = 'Tox21'
 TOX21_NR_AHR = 'Tox21_NR-AhR'
 AD_HOC = 'ad_hoc'
+TOX21_ALL_CLASSES = ['NR-AR', 'NR-AR-LBD', 'NR-AhR', 'NR-Aromatase','NR-ER', 'NR-ER-LBD', 'NR-PPAR-gamma',
+                    'SR-ARE', 'SR-ATAD5', 'SR-HSE', 'SR-MMP', 'SR-p53']
+TOX21_DICT = {'NR-AR':0, 
+              'NR-AR-LBD':1, 
+              'NR-AhR':2, 
+              'NR-Aromatase':3,
+              'NR-ER':4, 
+              'NR-ER-LBD':5, 
+              'NR-PPAR-gamma':6,
+              'SR-ARE':7, 
+              'SR-ATAD5':8, 
+              'SR-HSE':9, 
+              'SR-MMP':10, 
+              'SR-p53':11}
 
 STUDY_OPTIONS = ['--', TOX21, TOX21_NR_AHR, AD_HOC]
 
@@ -134,7 +148,7 @@ class ModelDesc:
     X_desc: str = ''
     X_cols: List[str] = field(default_factory=list)
     X_scaler: StandardScaler = None
-    class_name: str = ''
+    model_class: str = ''
     model: object = None
   
 
@@ -154,7 +168,7 @@ class Env:
 
 
 def get_prefix(env:Env, app_vars:AppVars, model_desc:ModelDesc):
-    return f'{env.app_data}/{app_vars.study}/{model_desc.class_name}/{model_desc.X_desc}/'
+    return f'{env.app_data}/{app_vars.study}/{model_desc.model_class}/{model_desc.X_desc}/'
 
 
 def delete_contents(folder):
@@ -369,9 +383,8 @@ def torch_train_batch(model, criterion, optimizer, epochs, dataset, batch_size):
 
 
 
-def evaluate_multitask_model(model, dataloader, device, classes):
+def evaluate_model(model, dataloader, device, num_tasks):
 
-    num_tasks = len(classes)
     model.eval()  # Set model to evaluation mode (disables dropout/batchnorm updates)
     
     all_preds = []

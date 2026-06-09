@@ -15,6 +15,7 @@ if 'app_vars' in st.session_state:
 
 if 'model_desc' in st.session_state:
     model_desc:ModelDesc = st.session_state['model_desc']
+
     
 with st.sidebar:
     mol_container = st.container()
@@ -23,12 +24,19 @@ prefix = get_prefix(env, app_vars, model_desc)
 any_contents = any_contents(env.s3_bucket, prefix)
 
 if not any_contents:
-    st.write(f'No {model_desc.class_name} model with {model_desc.X_desc} features are available for {app_vars.study}')
+    st.write(f'No {model_desc.model_class} model with {model_desc.X_desc} features are available for {app_vars.study}')
     st.stop()
    
 # load the trained model
 model_key = f'{prefix}model_desc.pkl'
 model_desc:ModelDesc = get_from_s3(env.s3_bucket, model_key)
+app_key =  f'{prefix}app_vars.pkl'
+app_vars:AppVars = get_from_s3(env.s3_bucket, app_key)
+
+model_class = model_desc.model_class
+model = model_desc.model
+classes = app_vars.classes
+
 
 col1, col2 = st.columns([1,2])
 
@@ -37,7 +45,7 @@ df_input = None
 with col1:
     smiles_list = []
     cmpd_list = []
-    exp_val_list = []
+    y_true = []
 
     mol_input = st.radio('Mol input:', [SMI_LIST, FILE_UPLOAD], horizontal=True)
     
@@ -63,15 +71,9 @@ with col1:
             if  id_col != '--':
                 cmpd_list = df_input[id_col].tolist() 
 
-            exp_col_0 = st.selectbox('Select Experiment val Column if available:', options=col_all)  
-            if exp_col_0 != '--':
-                if  logarithmic_scale:
-                    exp_col = 'log_' + exp_col_0
-                    df_input[exp_col] = df_input[exp_col_0].apply(lambda x: math.log10(x))
-                else:
-                    exp_col = exp_col_0
-
-                exp_val_list = df_input[exp_col].tolist() 
+            exp_col = st.selectbox('Select Experiment val Column if available:', options=col_all)  
+            if exp_col != '--':
+                y_true = df_input[exp_col].tolist() 
 
 
     df_pred = None
@@ -82,17 +84,13 @@ with col1:
         X = X[model_desc.X_cols]
         X = model_desc.X_scaler.transform(X)
 
-        if model_desc.class_name == MODEL_TORCH:
-            model = model_desc.model
-            model.eval()
-            with torch.no_grad():
-                y_pred = model(torch.tensor(X, dtype=torch.float32)).numpy()
-        else:
-            y_pred = model_desc.model.predict(X)
-            y_pred = y_pred.reshape(-1,1)
+        model.eval()
+        with torch.no_grad():
+            y_pred = model(torch.tensor(X, dtype=torch.float32))
 
-        y_pred = model_desc.y_scaler.inverse_transform(y_pred)
-        preds = y_pred.reshape(-1)
+        preds = torch.sigmoid(y_pred).detach().numpy()
+        preds_binary = (preds > 0.5).astype(int)
+        # ic(preds)
     else:
         # w/o SMILES list, nothing can be done
         st.stop()  
@@ -100,38 +98,34 @@ with col1:
     
 with col2:
 
-    if exp_val_list:
+    if y_true:
         expt_label = exp_col
         pred_label = f'pred_{expt_label}'
+        pred_probability = f'prob_{expt_label}'
         if cmpd_list:
-            list_of_tuples = list(zip(cmpd_list, smiles_list, exp_val_list, preds))
-            df_pred = pd.DataFrame(list_of_tuples, columns=['Compound_ID', 'SMILES', expt_label, pred_label])
+            list_of_tuples = list(zip(cmpd_list, smiles_list, y_true, preds, preds_binary))
+            df_pred = pd.DataFrame(list_of_tuples, columns=['Compound_ID', 'SMILES', expt_label,  pred_probability, pred_label])
         else:
-            list_of_tuples = list(zip(smiles_list, exp_val_list, preds))
-            df_pred = pd.DataFrame(list_of_tuples, columns=['SMILES', expt_label, pred_label])
+            list_of_tuples = list(zip(smiles_list, y_true, preds, preds_binary))
+            df_pred = pd.DataFrame(list_of_tuples, columns=['SMILES', expt_label, pred_probability, pred_label])
     else:
         expt_label=''
-        pred_label = f'pred_{app_vars.expt_col_name}'
+        pred_label = 'pred_class'
+        pred_probability = 'prob_class'
         if cmpd_list:
-            list_of_tuples = list(zip(cmpd_list, smiles_list, preds))
-            df_pred = pd.DataFrame(list_of_tuples, columns=['Compound_ID', 'SMILES', pred_label])
+            list_of_tuples = list(zip(cmpd_list, smiles_list, preds, preds_binary))
+            df_pred = pd.DataFrame(list_of_tuples, columns=['Compound_ID', 'SMILES', pred_probability, pred_label])
         else:
-            list_of_tuples = list(zip(smiles_list, preds))
-            df_pred = pd.DataFrame(list_of_tuples, columns=['SMILES', pred_label])
-            
+            list_of_tuples = list(zip(smiles_list, preds, preds_binary))
+            df_pred = pd.DataFrame(list_of_tuples, columns=['SMILES', pred_probability, pred_label])
 
-    row_id = df_pred.index.to_numpy()
-    df_pred.insert(loc=0, column='row_id', value=row_id)
+    # df_pred[pred_probability] = pd.to_numeric(df_pred[pred_probability], errors='coerce') 
+    # df_pred[pred_probability] = df_pred[pred_probability].round(4)
+    st.dataframe(df_pred, hide_index=True)
 
-    if expt_label:
-        highlight_only = st.checkbox('Only display selected mol in the correlation fig')    
-    df_container = st.container()
+    if y_true:
 
-   
-    
-    if expt_label and expt_label in df_pred.columns:
-        st.write(f"The average K-fold (20/80) R2 of the model = {model_desc.k_fold_r2}")
-        st.write(f'The R2 for this data file is {round(r2_score(df_pred[expt_label], df_pred[pred_label]),2)}')
-        fig_df_structure(df_pred, expt_label, pred_label, df_container, mol_container, highlight_only=highlight_only)
-    else:
-        st.dataframe(df_pred, hide_index=True)
+        st_result_matrix(y_true, preds)
+        st_confusion_matrix(y_true, preds)
+
+
