@@ -100,6 +100,13 @@ with col2:
 
     if y_true:
         expt_label = exp_col
+        ic(preds_binary)
+        if len(classes) > 1:
+            expt_col_index = TOX21_DICT.get(exp_col)
+            preds = preds[:,  expt_col_index]
+            preds_binary = (preds > 0.5).astype(int)
+            ic(preds_binary)
+
         pred_label = f'pred_{expt_label}'
         pred_probability = f'prob_{expt_label}'
         if cmpd_list:

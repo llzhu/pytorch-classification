@@ -117,9 +117,6 @@ for split_idx, (train_idx, test_idx) in enumerate(sss.split(X_np, y_np_filled)):
         torch_train_batch(model, criterion, optimizer, int(epochs), train_subset.dataset, int(batch_size))
 
         model.eval()
-        # with torch.no_grad():
-        #     # y_train_pred = model(X_train_tensor)
-        #     y_test_pred = model(X_test_tensor)
           
         test_dataset = TensorDataset(X_test_tensor, y_test_tensor)
         test_dataloader = DataLoader(test_dataset, shuffle=False)
@@ -129,28 +126,10 @@ for split_idx, (train_idx, test_idx) in enumerate(sss.split(X_np, y_np_filled)):
 
         c1, c2 = st.columns(2)
         with c1:
-            
-            preds_binary = (all_preds > 0.5).astype(int)
-        
-            roc_auc = round(roc_auc_score(all_targets, all_preds), 3)
-            pr_auc = round(average_precision_score(all_targets, all_preds),3)
-            accuracy = round(accuracy_score(all_targets, preds_binary), 3)
-
-            st.write(f'roc_auc = {roc_auc} | pr_auc = {pr_auc} | accuracy = {accuracy}')
-
-            report = get_classification_report(all_targets, preds_binary)
-
-            del report['accuracy']
-            st.dataframe(report.transpose())
-
+            st_result_matrix(all_targets, all_preds)
 
         with c2:
-            fig, ax = plt.subplots(figsize=(5, 2.5),  layout="constrained")
-            ConfusionMatrixDisplay.from_predictions(all_targets, preds_binary, labels=None, display_labels=None, ax=ax, colorbar=True)
-            buf = io.BytesIO()
-            fig.savefig(buf, format="png")
-            st.image(buf)
-            # st.write('Confusion Matrix. X - Prediction; Y - Actual')
+            st_confusion_matrix(all_targets, all_preds)
 
     elif model_class == MODEL_MULTI:
         
@@ -165,12 +144,6 @@ for split_idx, (train_idx, test_idx) in enumerate(sss.split(X_np, y_np_filled)):
         torch_train_batch(model, criterion, optimizer, int(epochs), train_subset.dataset, int(batch_size))
 
         model.eval()
-        # with torch.no_grad():
-        #     y_train_pred = model(X_train_tensor)
-        #     y_test_pred = model(X_test_tensor)
-          
-        # probs = torch.sigmoid(y_test_pred).detach().numpy()
-        
         test_dataset = TensorDataset(X_test_tensor, y_test_tensor)
         test_dataloader = DataLoader(test_dataset, shuffle=False)
         
