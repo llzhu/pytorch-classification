@@ -20,24 +20,26 @@ def app_header():
         st.write('***')
     
 def app_setup():
-    sel1, sel2, sel3, sel4, sel5 = st. columns([4,3,3,3,3])
+    sel1, sel2, sel3 = st. columns([4,4,4])
 
-    with sel1:  # Studies/Datasets
+    with sel1:
+        login_name = st.text_input('User name', placeholder='Enter a user name you can remember')
         study = st.selectbox('Pick a dataset', STUDY_OPTIONS)
         st.write("***")
-        go_container = st.container()
+        go_container = st.container()   
+        
     with sel2:  # Discriptoes/FP
         X_desc = st.radio('Features:', FEATURE_OPTIONS)
-    with sel3:   # pick a algorithm
+        
         st.write("DNN Model:")
-        algorithm = st.radio(f'Select a Classification Algorithm:', options=MODEL_OPTIONS, horizontal=True)
+        algorithm = st.radio(f'Classification Algorithm:', options=MODEL_OPTIONS, horizontal=True)
         algorithm_container = st.container()
-    with sel4:   # exclusions
-        list_to_exclude = st.text_area('Exclude the following in the model training:')
+    with sel3:   # exclusions
+        list_to_exclude = st.text_area('Exclude the following ID:')
         excluded_list = get_list(list_to_exclude) if list_to_exclude else []
-    with sel5:
-        exclusion_seed = st.text_input("Seed for randomly excluded list (int):", value='42')
-        excluded_pct = st.text_input("Percentage for randomly excluded list (int):")
+        st.write('Exclude a list randomly' )
+        exclusion_seed = '42'
+        excluded_pct = st.text_input("Percentage (int):")
    
 
     new_or_existing = go_container.radio('New model or using existing model?', ['Work with an Existing Model', 'Create New Model'], 
@@ -46,7 +48,7 @@ def app_setup():
   
     st.write('***')
 
-    return study, X_desc, algorithm, excluded_list, exclusion_seed, excluded_pct, new_model, algorithm_container
+    return login_name, study, X_desc, algorithm, excluded_list, exclusion_seed, excluded_pct, new_model, algorithm_container
 
 def side_data_file_upload(warning_container=None):
     uploaded_data_file = None

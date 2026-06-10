@@ -20,13 +20,25 @@ if 'model_desc' in st.session_state:
 with st.sidebar:
     mol_container = st.container()
 
-prefix = get_prefix(env, app_vars, model_desc)
-any_contents = any_contents(env.s3_bucket, prefix)
+sel_models = ['My model', 'Master Model']
+loaded_model = st.selectbox(f'Load a saved model:', sel_models)
 
-if not any_contents:
-    st.write(f'No {model_desc.model_class} model with {model_desc.X_desc} features are available for {app_vars.study}')
+
+if loaded_model == 'My model':  
+    prefix = get_prefix(env, app_vars, model_desc)
+    folder_name = app_vars.login_name
+else:
+    prefix = get_prefix_master(env, app_vars, model_desc)
+    folder_name = 'master'
+
+is_any_contents = any_contents(env.s3_bucket, prefix)
+
+if not is_any_contents:
+    st.write(f"""No {model_desc.model_class} model with {model_desc.X_desc} features are available 
+                 for {app_vars.study} in {folder_name} folder""")
     st.stop()
-   
+
+
 # load the trained model
 model_key = f'{prefix}model_desc.pkl'
 model_desc:ModelDesc = get_from_s3(env.s3_bucket, model_key)

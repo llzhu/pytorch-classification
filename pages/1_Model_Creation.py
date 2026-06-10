@@ -51,6 +51,7 @@ classes = app_vars.classes
 model = model_desc.model
 X_tensor, y_tensor = dataset.tensors
 
+save_to_master = False
 
 col1, col2, col3, col4, col5 = st.columns(5)
 
@@ -66,6 +67,9 @@ with col4:
     n_splits = st.text_input('Number of Splits:', value='5')
 with col5:
     pos_weight = st.text_input('Positive Weight:', value='1')
+
+    if app_vars.is_admin:
+        save_to_master = st.checkbox('Save to master folder!')
     
 
 
@@ -167,10 +171,17 @@ torch_train_batch(model, criterion, optimizer, int(epochs), dataset, int(batch_s
 
 model_desc.model = model   # populate model_desc with trained model
 
-key_prefix = f'{env.app_data}/{app_vars.study}/{model_class}/{model_desc.X_desc}'
-key_model_desc = f'{key_prefix}/model_desc.pkl'
+# key_prefix = f'{app_vars.login_name}/{env.app_data}/{app_vars.study}/{model_class}/{model_desc.X_desc}'
+if save_to_master:
+    key_prefix = get_prefix_master(env, app_vars, model_desc)
+else:
+    key_prefix = get_prefix(env, app_vars, model_desc)
+
+ic(key_prefix)
+key_model_desc = f'{key_prefix}model_desc.pkl'
+ic(key_model_desc)
 pickle_to_s3(model_desc, env.s3_bucket, key_model_desc)
-key_app_vars = f'{key_prefix}/app_vars.pkl'
+key_app_vars = f'{key_prefix}app_vars.pkl'
 pickle_to_s3(app_vars, env.s3_bucket, key_app_vars)
 
 

@@ -95,7 +95,7 @@ FP_ONLY = 'Morgan_FP'
 ADD_RDKIT_DESCRIPTORS = 'Morgan_FP_2D_Descriptors'
 RDKIT_DESCRIPTORS_ONLY = '2D_Descriptors'
 
-FEATURE_OPTIONS = [FP_ONLY, ADD_RDKIT_DESCRIPTORS, RDKIT_DESCRIPTORS_ONLY]
+FEATURE_OPTIONS = [ADD_RDKIT_DESCRIPTORS, FP_ONLY, RDKIT_DESCRIPTORS_ONLY]
 
 # Studies/dataset
 TOX21 = 'Tox21'
@@ -151,6 +151,8 @@ CHEMBL_CMPD_ID = 'molecule_chembl_id'
 
 @dataclass
 class AppVars:
+    login_name: str
+    is_admin: bool
     study: str
     dataset_shape: Tuple[int,int] = (1, 1)
     classes: List[str] = field(default_factory=list)
@@ -181,8 +183,10 @@ class Env:
 
 
 def get_prefix(env:Env, app_vars:AppVars, model_desc:ModelDesc):
-    return f'{env.app_data}/{app_vars.study}/{model_desc.model_class}/{model_desc.X_desc}/'
+    return f'{app_vars.login_name}/{env.app_data}/{app_vars.study}/{model_desc.model_class}/{model_desc.X_desc}/'
 
+def get_prefix_master(env:Env, app_vars:AppVars, model_desc:ModelDesc):
+    return f'{env.app_data}/{app_vars.study}/{model_desc.model_class}/{model_desc.X_desc}/'
 
 def delete_contents(folder):
     for filename in os.listdir(folder):

@@ -24,7 +24,7 @@ env = Env(  st.secrets['src_data'],
 
 app_header()
 
-study, X_desc, algorithm, excluded_list, exclusion_seed, excluded_pct, new_model, algorithm_container = app_setup() 
+login_name, study, X_desc, algorithm, excluded_list, exclusion_seed, excluded_pct, new_model, algorithm_container = app_setup() 
 
 st.session_state['new_model'] = new_model
 st.session_state['env'] = env
@@ -37,7 +37,7 @@ if study == '--':
        
 if not new_model:
     # These basic data are still need to properly load the existing models
-    app_vars = AppVars(study=study)
+    app_vars = AppVars(login_name=login_name, is_admin=login_name in env.admins,study=study)
     model_desc = ModelDesc(X_desc=X_desc, model_class=algorithm, model=model)
     st.session_state['app_vars'] = app_vars   
     st.session_state['model_desc'] = model_desc
@@ -153,7 +153,7 @@ elif algorithm == MODEL_SINGLE:
 
 # model.to(device)
 
-app_vars = AppVars(study, X.shape, classes)
+app_vars = AppVars(login_name=login_name, is_admin=login_name in env.admins,study=study,dataset_shape=X.shape, classes=classes)
 model_desc = ModelDesc(X_desc, X_cols, X_scaler, algorithm, model)
 dataset = TensorDataset(torch.tensor(X, dtype=torch.float32), torch.tensor(y, dtype=torch.float32))
 
