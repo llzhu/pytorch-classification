@@ -63,7 +63,7 @@ elif study == TOX21_NR_AR_LBD:
     classes = ['NR-AR-LBD']
     df_g = get_tox21_df(classes, 'tox21_nr_ar_lbd.csv', env, algorithm_container, algorithm)  
 elif study == TOX21_NR_AHR:
-    classes = ['NR-AR-AhR']
+    classes = ['NR-AhR']
     df_g = get_tox21_df(classes, 'tox21_nr_ahr.csv', env, algorithm_container, algorithm) 
 elif study == TOX21_NR_AROMATASE:
     classes = ['NR-Aromatase']
