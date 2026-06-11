@@ -52,12 +52,14 @@ model = model_desc.model
 X_tensor, y_tensor = dataset.tensors
 
 save_to_master = False
+copy_container = None
 
 col1, col2, col3, col4, col5 = st.columns(5)
 
 with col1:
     epochs = st.text_input('Epochs:', value='100')
     exe_container = st.container()
+    exe_empty = st.empty()
 with col2:
     batch_size = st.text_input('Batch Size:', value='32')
 with col3:
@@ -70,6 +72,7 @@ with col5:
 
     if app_vars.is_admin:
         save_to_master = st.checkbox('Save to master folder!')
+        copy_container = st.container()
     
 
 
@@ -78,10 +81,10 @@ go = exe_container.button('Create a new model!')
 if not go:
     st.stop()
 
+exe_empty.write("Training/Evaluating train/test sets ...")
 
 summery_empty = st.empty()
 summery_empty.progress(0.01)
-
 
 sss = None
 if model_class == MODEL_SINGLE:
@@ -158,6 +161,7 @@ for split_idx, (train_idx, test_idx) in enumerate(sss.split(X_np, y_np_filled)):
     summery_empty.progress((split_idx+1)/int(n_splits))
     st.write('***')
 
+exe_empty.write("Training with whole dataset ...")
 # Train with the whole dataset and save it to S3
 if model_class == MODEL_SINGLE:
     criterion = nn.BCEWithLogitsLoss(pos_weight=torch.tensor(int(pos_weight)))
@@ -177,12 +181,14 @@ if save_to_master:
 else:
     key_prefix = get_prefix(env, app_vars, model_desc)
 
-ic(key_prefix)
+
 key_model_desc = f'{key_prefix}model_desc.pkl'
-ic(key_model_desc)
 pickle_to_s3(model_desc, env.s3_bucket, key_model_desc)
 key_app_vars = f'{key_prefix}app_vars.pkl'
 pickle_to_s3(app_vars, env.s3_bucket, key_app_vars)
+
+exe_empty.write(f"Done! And model saved.")
+
 
 
 # end = timer()

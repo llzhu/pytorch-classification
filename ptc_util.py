@@ -211,6 +211,54 @@ def convert_df_csv(df, index=False):
 
 
 
+def copy_s3_folder(bucket_name, source_folder, destination_folder):
+    """
+    Copies all files from one folder to another within the same S3 bucket.
+    """
+    
+    # Ensure folder paths end with a trailing slash
+    if not source_folder.endswith('/'):
+        source_folder += '/'
+    if not destination_folder.endswith('/'):
+        destination_folder += '/'
+        
+    # Use a paginator to handle folders containing more than 1,000 objects
+    paginator = s3client.get_paginator('list_objects_v2')
+    page_iterator = paginator.paginate(Bucket=bucket_name, Prefix=source_folder)
+    
+    for page in page_iterator:
+        # Check if the folder contains any files
+        if 'Contents' in page:
+            for obj in page['Contents']:
+                source_key = obj['Key']
+                
+                # Skip the directory placeholder itself if it exists
+                if source_key == source_folder:
+                    continue
+                
+                # Construct the new destination key
+                # This replaces the old prefix with the new prefix
+                relative_path = source_key[len(source_folder):]
+                destination_key = destination_folder + relative_path
+                
+                # Define the source object configuration dict
+                copy_source = {
+                    'Bucket': bucket_name,
+                    'Key': source_key
+                }
+                
+                print(f"Copying: {source_key} -> {destination_key}")
+                
+                # Perform the copy operation
+                s3client.copy_object(
+                    Bucket=bucket_name,
+                    CopySource=copy_source,
+                    Key=destination_key
+                )
+
+
+
+
 class L3Model(nn.Module):
     """ A DNN model with 3 layers (input, 1 hidden layer and out layer)
     """

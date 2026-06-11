@@ -20,9 +20,13 @@ if 'model_desc' in st.session_state:
 with st.sidebar:
     mol_container = st.container()
 
-sel_models = ['My model', 'Master Model']
-loaded_model = st.selectbox(f'Load a saved model:', sel_models)
-
+copy_to_master = False
+c1, c2 = st.columns(2)
+with c1:
+    sel_models = ['My model', 'Master Model']
+    loaded_model = st.selectbox(f'Load a saved model:', sel_models)
+with c2:
+    copy_container = st.container()
 
 if loaded_model == 'My model':  
     prefix = get_prefix(env, app_vars, model_desc)
