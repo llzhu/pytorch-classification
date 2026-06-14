@@ -88,7 +88,7 @@ def get_df_from_s3csv(bucket, key):
 MODEL_MULTI = 'Multi-Task'
 MODEL_SINGLE = 'Single Task'
 
-MODEL_OPTIONS = [ MODEL_MULTI, MODEL_SINGLE]
+MODEL_OPTIONS = [ MODEL_SINGLE, MODEL_MULTI]
 
 # discriptors
 FP_ONLY = 'Morgan_FP'

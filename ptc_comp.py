@@ -18,7 +18,15 @@ def app_header():
         st.markdown('The Tox21 dataset is a gold standard for Predictive Toxicology.')
         st.markdown('https://tox21.gov/')
         st.write('***')
+
+
+def get_classification_model(dataset):
+    if dataset == TOX21:
+        return 1
+    else:
+        return 0
     
+
 def app_setup():
     sel1, sel2, sel3 = st. columns([4,4,4])
 
@@ -31,8 +39,8 @@ def app_setup():
     with sel2:  # Discriptoes/FP
         X_desc = st.radio('Features:', FEATURE_OPTIONS)
         
-        st.write("DNN Model:")
-        algorithm = st.radio(f'Classification Algorithm:', options=MODEL_OPTIONS, horizontal=True)
+        st.write("  ")
+        algorithm = st.radio(f'Classification Model:', options=MODEL_OPTIONS, index=get_classification_model(study), horizontal=True)
         algorithm_container = st.container()
     with sel3:   # exclusions
         list_to_exclude = st.text_area('Exclude the following ID:')

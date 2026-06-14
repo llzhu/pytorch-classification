@@ -52,7 +52,7 @@ model = model_desc.model
 X_tensor, y_tensor = dataset.tensors
 
 save_to_master = False
-copy_container = None
+# copy_container = None
 
 col1, col2, col3, col4, col5 = st.columns(5)
 
@@ -72,7 +72,7 @@ with col5:
 
     if app_vars.is_admin:
         save_to_master = st.checkbox('Save to master folder!')
-        copy_container = st.container()
+    #     copy_container = st.container()
     
 
 

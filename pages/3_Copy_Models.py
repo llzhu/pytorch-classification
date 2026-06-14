@@ -46,10 +46,21 @@ if not is_any_contents:
                  for {app_vars.study} in {folder_name} folder""")
     st.stop()
 
+model_key = f'{prefix}model_desc.pkl'
+model_desc:ModelDesc = get_from_s3(env.s3_bucket, model_key)
+# app_key =  f'{prefix}app_vars.pkl'
+# app_vars:AppVars = get_from_s3(env.s3_bucket, app_key)
+
+# model_class = model_desc.model_class
+# model = model_desc.model
+# classes = app_vars.classes
+
+st.write(model_desc.model_class)
+st.write(model_desc.model)
+
 if copy_to_master:
-    ic(prefix)
+    
     master_prefix = get_prefix_master(env, app_vars, model_desc)
-    ic(master_prefix)
     copy_s3_folder(env.s3_bucket, prefix, master_prefix)
 
     copy_container.write('Model has been copied to Master folder.')
