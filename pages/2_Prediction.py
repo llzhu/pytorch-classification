@@ -20,7 +20,7 @@ if 'model_desc' in st.session_state:
 with st.sidebar:
     mol_container = st.container()
 
-copy_to_master = False
+
 c1, c2 = st.columns(2)
 with c1:
     sel_models = ['My model', 'Master Model']
@@ -51,6 +51,7 @@ app_vars:AppVars = get_from_s3(env.s3_bucket, app_key)
 
 model_class = model_desc.model_class
 model = model_desc.model
+model.to(DEVICE)
 classes = app_vars.classes
 
 
@@ -99,12 +100,14 @@ with col1:
         X =  get_all_descriptors(mols, radius=RADIUS, fp_size=FP_SIZE, descriptor_sel=model_desc.X_desc, reduced=False)
         X = X[model_desc.X_cols]
         X = model_desc.X_scaler.transform(X)
+        X_tensor = torch.tensor(X, dtype=torch.float32)
+        X_tensor = X_tensor.to(DEVICE)
 
         model.eval()
         with torch.no_grad():
-            y_pred = model(torch.tensor(X, dtype=torch.float32))
+            y_pred = model(X_tensor)
 
-        preds = torch.sigmoid(y_pred).detach().numpy()
+        preds = torch.sigmoid(y_pred).detach().cpu().numpy()
         preds_binary = (preds > 0.5).astype(int)
         # ic(preds)
     else:

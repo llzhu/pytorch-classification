@@ -13,9 +13,6 @@ from datetime import timedelta
 import io
 
 
-# device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-device = 'cpu'
-
 # start = timer()
 
 if 'new_model' in st.session_state:
@@ -49,6 +46,7 @@ if 'dataset' in st.session_state:
 model_class = model_desc.model_class
 classes = app_vars.classes
 model = model_desc.model
+model.to(DEVICE)
 X_tensor, y_tensor = dataset.tensors
 
 save_to_master = False
@@ -123,12 +121,12 @@ for split_idx, (train_idx, test_idx) in enumerate(sss.split(X_np, y_np_filled)):
 
         torch_train_batch(model, criterion, optimizer, int(epochs), train_subset.dataset, int(batch_size))
 
-        model.eval()
+        # model.eval()
           
         test_dataset = TensorDataset(X_test_tensor, y_test_tensor)
         test_dataloader = DataLoader(test_dataset, shuffle=False)
         
-        all_preds, all_targets = evaluate_model(model, test_dataloader, device, len(classes))
+        all_preds, all_targets = evaluate_model(model, test_dataloader)
 
 
         c1, c2 = st.columns(2)
@@ -141,7 +139,6 @@ for split_idx, (train_idx, test_idx) in enumerate(sss.split(X_np, y_np_filled)):
     elif model_class == MODEL_MULTI:
         
         criterion = MaskedBCEWithLogitsLoss(pos_weight=torch.tensor(int(pos_weight)))
-        # criterion = masked_bce_loss_fn
         optimizer = torch.optim.Adam(model.parameters(), lr=float(lr))
        
         # for name, param in model.named_parameters():
@@ -150,11 +147,11 @@ for split_idx, (train_idx, test_idx) in enumerate(sss.split(X_np, y_np_filled)):
 
         torch_train_batch(model, criterion, optimizer, int(epochs), train_subset.dataset, int(batch_size))
 
-        model.eval()
+        # model.eval()
         test_dataset = TensorDataset(X_test_tensor, y_test_tensor)
         test_dataloader = DataLoader(test_dataset, shuffle=False)
         
-        all_preds, all_targets = evaluate_model(model, test_dataloader, device, len(classes))
+        all_preds, all_targets = evaluate_model(model, test_dataloader)
 
         st_multitask_results(all_preds, all_targets, classes)
     
@@ -173,6 +170,8 @@ optimizer = torch.optim.Adam(model.parameters(), lr=float(lr))
 torch_train_batch(model, criterion, optimizer, int(epochs), dataset, int(batch_size))
 
 
+
+model.to('cpu')
 model_desc.model = model   # populate model_desc with trained model
 
 # key_prefix = f'{app_vars.login_name}/{env.app_data}/{app_vars.study}/{model_class}/{model_desc.X_desc}'

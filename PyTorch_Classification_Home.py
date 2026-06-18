@@ -12,7 +12,6 @@ from ptc_comp import *
 
 st.set_page_config(page_title='PyTorch Classification', layout='wide')
 
-# device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 env = Env(  st.secrets['src_data'],
             st.secrets['app_data'],

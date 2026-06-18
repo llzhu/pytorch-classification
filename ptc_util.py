@@ -28,6 +28,8 @@ import pickle
 from typing import Tuple
 
 
+DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
 s3client = boto3.client(
     "s3",
     aws_access_key_id = st.secrets['aws_access_key_id'],
@@ -414,11 +416,15 @@ class MultiTaskNet(nn.Module):
 def torch_train_batch(model, criterion, optimizer, epochs, dataset, batch_size):
    
     data_loader = DataLoader(dataset, batch_size, shuffle=True)
+    
     # Training loop
     for epoch in range(epochs):
         model.train()
         running_loss = 0.0
         for X_batch, y_batch in data_loader:
+            X_batch = X_batch.to(DEVICE)
+            y_batch = y_batch.to(DEVICE)
+
             optimizer.zero_grad()
             preds = model(X_batch)
             # ic(preds)
@@ -448,7 +454,7 @@ def torch_train_batch(model, criterion, optimizer, epochs, dataset, batch_size):
 
 
 
-def evaluate_model(model, dataloader, device, num_tasks):
+def evaluate_model(model, dataloader):
 
     model.eval()  # Set model to evaluation mode (disables dropout/batchnorm updates)
     
@@ -458,7 +464,7 @@ def evaluate_model(model, dataloader, device, num_tasks):
     # 1. Gather all predictions and targets across the entire dataloader
     with torch.no_grad():  # Turn off gradient tracking to save memory
         for batch_features, batch_targets in dataloader:
-            batch_features = batch_features.to(device)
+            batch_features = batch_features.to(DEVICE)
             
             # Forward pass to get raw logits
             logits = model(batch_features)
@@ -467,7 +473,7 @@ def evaluate_model(model, dataloader, device, num_tasks):
             probs = torch.sigmoid(logits)
             # ic(probs)
             
-            all_preds.append(probs.cpu().numpy())
+            all_preds.append(probs.detach().cpu().numpy())
             all_targets.append(batch_targets.numpy())
 
     # ic(all_preds)
