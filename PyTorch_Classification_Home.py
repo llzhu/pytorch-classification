@@ -44,53 +44,59 @@ if not new_model:
     st.write(f"An existing model for {app_vars.study} will be used.")
     st.stop()
 
+ic(study)
+ic(algorithm)
+if (study == TOX21 and algorithm != MODEL_MULTI) or (study != TOX21 and algorithm == MODEL_MULTI):
+    st.error(f'{MODEL_MULTI} applies and only applies to {TOX21}')
+    st.stop()
+
 warning_container = st.container()
 
 df_g = None
 bin_0 = [0.1]
 classes = []
 
-algorithm = MODEL_SINGLE   # Default - single task
+
 if study == TOX21:
     algorithm = MODEL_MULTI
     classes = TOX21_ALL_CLASSES
-    df_g = get_tox21_df(classes, 'tox21_single_organic_nn.csv', env, algorithm_container, algorithm)
+    df_g = get_tox21_df(classes, 'tox21_single_organic_nn.csv', env)
 elif study == TOX21_NR_AR:
     classes = ['NR-AR']
-    df_g = get_tox21_df(classes, 'tox21_nr_ar.csv', env, algorithm_container, algorithm)
+    df_g = get_tox21_df(classes, 'tox21_nr_ar.csv', env)
 elif study == TOX21_NR_AR_LBD:
     classes = ['NR-AR-LBD']
-    df_g = get_tox21_df(classes, 'tox21_nr_ar_lbd.csv', env, algorithm_container, algorithm)  
+    df_g = get_tox21_df(classes, 'tox21_nr_ar_lbd.csv', env)  
 elif study == TOX21_NR_AHR:
     classes = ['NR-AhR']
-    df_g = get_tox21_df(classes, 'tox21_nr_ahr.csv', env, algorithm_container, algorithm) 
+    df_g = get_tox21_df(classes, 'tox21_nr_ahr.csv', env) 
 elif study == TOX21_NR_AROMATASE:
     classes = ['NR-Aromatase']
-    df_g = get_tox21_df(classes, 'tox21_nr_aromatase.csv', env, algorithm_container, algorithm) 
+    df_g = get_tox21_df(classes, 'tox21_nr_aromatase.csv', env) 
 elif study == TOX21_NR_ER:
     classes = ['NR-ER']
-    df_g = get_tox21_df(classes, 'tox21_nr_er.csv', env, algorithm_container, algorithm) 
+    df_g = get_tox21_df(classes, 'tox21_nr_er.csv', env) 
 elif study == TOX21_NR_ER_LBD:
     classes = ['NR-ER-LBD']
-    df_g = get_tox21_df(classes, 'tox21_nr_er_lbd.csv', env, algorithm_container, algorithm)  
+    df_g = get_tox21_df(classes, 'tox21_nr_er_lbd.csv', env)  
 elif study == TOX21_NR_PPAR_GAMMA:
     classes = ['NR-PPAR-gamma']
-    df_g = get_tox21_df(classes, 'tox21_nr_ppar_gamma.csv', env, algorithm_container, algorithm) 
+    df_g = get_tox21_df(classes, 'tox21_nr_ppar_gamma.csv', env) 
 elif study == TOX21_SR_ARE:
     classes = ['SR-ARE']
-    df_g = get_tox21_df(classes, 'tox21_sr_are.csv', env, algorithm_container, algorithm) 
+    df_g = get_tox21_df(classes, 'tox21_sr_are.csv', env) 
 elif study == TOX21_SR_ATAD5:
     classes = ['SR-ATAD5']
-    df_g = get_tox21_df(classes, 'tox21_sr_atad5.csv', env, algorithm_container, algorithm)
+    df_g = get_tox21_df(classes, 'tox21_sr_atad5.csv', env)
 elif study == TOX21_SR_HSE:
     classes = ['SR-HSE']
-    df_g = get_tox21_df(classes, 'tox21_sr_hse.csv', env, algorithm_container, algorithm)
+    df_g = get_tox21_df(classes, 'tox21_sr_hse.csv', env)
 elif study == TOX21_SR_MMP:
     classes = ['SR-MMP']
-    df_g = get_tox21_df(classes, 'tox21_sr_mmp.csv', env, algorithm_container, algorithm)
+    df_g = get_tox21_df(classes, 'tox21_sr_mmp.csv', env)
 elif study == TOX21_SR_P53:
     classes = ['SR-p53']
-    df_g = get_tox21_df(classes, 'tox21_sr_p53.csv', env, algorithm_container, algorithm)
+    df_g = get_tox21_df(classes, 'tox21_sr_p53.csv', env)
 
 elif study == AD_HOC:
     df_g, expt_col_name = side_data_file_upload(warning_container=warning_container)
@@ -98,7 +104,7 @@ elif study == AD_HOC:
 df_ex = None
 if excluded_pct and int(excluded_pct) > 0:
     # ss = ShuffleSplit(n_splits=1, test_size=int(excluded_pct)/100.0, random_state=int(exclusion_seed))
-    if algorithm == MODEL_SINGLE:
+    if algorithm == MODEL_L3 or algorithm == MODEL_L4:
         sss = StratifiedShuffleSplit(n_splits=1, test_size=int(excluded_pct)/100.0, random_state=int(exclusion_seed))
     elif algorithm == MODEL_MULTI:
         sss = MultilabelStratifiedShuffleSplit(n_splits=1, test_size=int(excluded_pct)/100.0, random_state=int(exclusion_seed))
@@ -144,11 +150,11 @@ X_df = pd.DataFrame(data=X, columns=X_cols)
 if algorithm == MODEL_MULTI:
     model = MultiTaskNet(input_dim=len(X_cols), num_tasks=len(classes), dim1=128, dim2=64)
 
-    # for name, param in model.named_parameters():
-    #     print(name, torch.isnan(param).any().item())
+elif algorithm == MODEL_L3:
+    model = L3Model(input_dim=len(X_cols), dim1=512, dim2=64, output_dim=1)
 
-elif algorithm == MODEL_SINGLE:
-    model = L3Model(input_dim=len(X_cols), dim1=128, dim2=64, output_dim=1)
+elif algorithm == MODEL_L4:
+    model = L4Model(input_dim=len(X_cols), dim1=512, dim2=128, dim3=32, output_dim=1)
 
 # model.to(device)
 

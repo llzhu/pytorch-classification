@@ -88,9 +88,10 @@ def get_df_from_s3csv(bucket, key):
 
 # algorithms
 MODEL_MULTI = 'Multi-Task'
-MODEL_SINGLE = 'Single Task'
+MODEL_L3 = 'L3_Model'
+MODEL_L4 = 'L4_Model'
 
-MODEL_OPTIONS = [ MODEL_SINGLE, MODEL_MULTI]
+MODEL_OPTIONS = [ MODEL_L3, MODEL_L4, MODEL_MULTI]
 
 # discriptors
 FP_ONLY = 'Morgan_FP'
@@ -134,7 +135,7 @@ STUDY_OPTIONS = ['--', TOX21, TOX21_NR_AR, TOX21_NR_AR_LBD, TOX21_NR_AHR, TOX21_
                     TOX21_NR_PPAR_GAMMA, TOX21_SR_ARE, TOX21_SR_ATAD5, TOX21_SR_HSE, TOX21_SR_MMP, TOX21_SR_P53, AD_HOC]
 
 RADIUS = 3 
-FP_SIZE = 4096
+FP_SIZE = 2048
 LEARNING_RATE = 0.001
 
 SMI_LIST = 'SMILES lists'
@@ -264,7 +265,7 @@ def copy_s3_folder(bucket_name, source_folder, destination_folder):
 class L3Model(nn.Module):
     """ A DNN model with 3 layers (input, 1 hidden layer and out layer)
     """
-    def __init__(self, input_dim, dim1=256, dim2=128, output_dim=1):
+    def __init__(self, input_dim, dim1=512, dim2=128, output_dim=1):
         super().__init__()
         self.net = nn.Sequential(
             nn.Linear(input_dim, dim1),
@@ -283,7 +284,7 @@ class L3Model(nn.Module):
 class L4Model(nn.Module):
     """ A DNN model with 4 layers (input, 2 hidden layers and out layer)
     """
-    def __init__(self, input_dim, dim1=256, dim2=128, dim3=64, output_dim=1):
+    def __init__(self, input_dim, dim1=512, dim2=128, dim3=64, output_dim=1):
         super().__init__()
         self.net = nn.Sequential(
             nn.Linear(input_dim, dim1),
@@ -531,8 +532,7 @@ def display_multitask_results(all_preds, all_targets, classes):
     
     return task_auc_scores
 
-def get_tox21_df(classes, csv_name, env, container, model_class):
-    container.write(f'The DNN is overwritten to {model_class}')
+def get_tox21_df(classes, csv_name, env):
     df_g =  get_df_from_s3csv(env.s3_bucket, f'{env.src_data}/{csv_name}')
     df_g = df_g[['Title', 'SMILES'] + classes]      
     df_g = df_g.rename(columns={'Title': COMPOUND_ID,})
@@ -582,7 +582,7 @@ def get_floor(in_num: float, floor: float)-> float:
     return out_num
 
 
-def remove_low_variance(input_data, threshold=0.1) -> pd.DataFrame:
+def remove_low_variance(input_data, threshold=0) -> pd.DataFrame:
     # input_data expacted to be np.ndarray or pd.Dataframe
     if isinstance(input_data, np.ndarray):
         input_data = pd.DataFrame(data=input_data)  

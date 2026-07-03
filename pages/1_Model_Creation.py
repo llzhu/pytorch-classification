@@ -85,7 +85,7 @@ summery_empty = st.empty()
 summery_empty.progress(0.01)
 
 sss = None
-if model_class == MODEL_SINGLE:
+if model_class in [MODEL_L3, MODEL_L4]:
     sss= StratifiedShuffleSplit(
         n_splits=int(n_splits),
         test_size=float(test_size),
@@ -115,8 +115,8 @@ for split_idx, (train_idx, test_idx) in enumerate(sss.split(X_np, y_np_filled)):
     y_test_tensor = test_subset.dataset.tensors[1][test_subset.indices]
 
     
-    if model_class == MODEL_SINGLE:
-        criterion = nn.BCEWithLogitsLoss(pos_weight=torch.tensor(int(pos_weight)))
+    if model_class in [MODEL_L3, MODEL_L4]:
+        criterion = nn.BCEWithLogitsLoss(pos_weight=torch.tensor(float(pos_weight)))
         optimizer = torch.optim.Adam(model.parameters(), lr=float(lr))
 
         torch_train_batch(model, criterion, optimizer, int(epochs), train_subset.dataset, int(batch_size))
@@ -138,7 +138,7 @@ for split_idx, (train_idx, test_idx) in enumerate(sss.split(X_np, y_np_filled)):
 
     elif model_class == MODEL_MULTI:
         
-        criterion = MaskedBCEWithLogitsLoss(pos_weight=torch.tensor(int(pos_weight)))
+        criterion = MaskedBCEWithLogitsLoss(pos_weight=torch.tensor(float(pos_weight)))
         optimizer = torch.optim.Adam(model.parameters(), lr=float(lr))
        
         # for name, param in model.named_parameters():
@@ -160,11 +160,11 @@ for split_idx, (train_idx, test_idx) in enumerate(sss.split(X_np, y_np_filled)):
 
 exe_empty.write("Training with whole dataset ...")
 # Train with the whole dataset and save it to S3
-if model_class == MODEL_SINGLE:
-    criterion = nn.BCEWithLogitsLoss(pos_weight=torch.tensor(int(pos_weight)))
+if model_class in [MODEL_L3, MODEL_L4]:
+    criterion = nn.BCEWithLogitsLoss(pos_weight=torch.tensor(float(pos_weight)))
 
 elif model_class == MODEL_MULTI:
-    criterion = MaskedBCEWithLogitsLoss(pos_weight=torch.tensor(int(pos_weight)))
+    criterion = MaskedBCEWithLogitsLoss(pos_weight=torch.tensor(float(pos_weight)))
 
 optimizer = torch.optim.Adam(model.parameters(), lr=float(lr))
 torch_train_batch(model, criterion, optimizer, int(epochs), dataset, int(batch_size))

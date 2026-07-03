@@ -40,7 +40,7 @@ def app_setup():
         X_desc = st.radio('Features:', FEATURE_OPTIONS)
         
         st.write("  ")
-        algorithm = st.radio(f'Classification Model:', options=MODEL_OPTIONS, index=get_classification_model(study), horizontal=True)
+        algorithm = st.radio(f'Classification Model:', options=MODEL_OPTIONS, horizontal=True)
         algorithm_container = st.container()
     with sel3:   # exclusions
         list_to_exclude = st.text_area('Exclude the following ID:')
