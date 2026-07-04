@@ -169,7 +169,7 @@ class ModelDesc:
     model_class: str = ''
     model: object = None
   
-
+# Not used. use TensorDataset instead
 @dataclass
 class ModelData:
     X: pd.DataFrame
@@ -597,6 +597,7 @@ def get_rdkit_fp(morgan_gen, mol_list):
 
 def get_rdkit_descriptors(mol_list, excluded_descriptors = None):
     descriptor_names = [x[0] for x in Descriptors._descList]
+    
     if excluded_descriptors:
         descriptor_names = [d for d in descriptor_names if d not in excluded_descriptors]
     calc = MoleculeDescriptors.MolecularDescriptorCalculator(descriptor_names)

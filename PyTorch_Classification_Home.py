@@ -2,7 +2,6 @@ import pandas as pd
 import streamlit as st
 import plotly.figure_factory as ff
 from rdkit import Chem
-from sklearn import preprocessing
 from sklearn.model_selection import ShuffleSplit, StratifiedShuffleSplit
 from iterstrat.ml_stratifiers import MultilabelStratifiedShuffleSplit
 from torch.utils.data import TensorDataset, DataLoader 
@@ -60,7 +59,8 @@ classes = []
 if study == TOX21:
     algorithm = MODEL_MULTI
     classes = TOX21_ALL_CLASSES
-    df_g = get_tox21_df(classes, 'tox21_single_organic_nn.csv', env)
+    # df_g = get_tox21_df(classes, 'tox21_single_organic_nn.csv', env)
+    df_g = get_tox21_df(classes, 'Tox21.csv', env)
 elif study == TOX21_NR_AR:
     classes = ['NR-AR']
     df_g = get_tox21_df(classes, 'tox21_nr_ar.csv', env)
@@ -108,8 +108,8 @@ if excluded_pct and int(excluded_pct) > 0:
         sss = StratifiedShuffleSplit(n_splits=1, test_size=int(excluded_pct)/100.0, random_state=int(exclusion_seed))
     elif algorithm == MODEL_MULTI:
         sss = MultilabelStratifiedShuffleSplit(n_splits=1, test_size=int(excluded_pct)/100.0, random_state=int(exclusion_seed))
-
-    for train_index, test_index in sss.split(X=df_g[SMILES].to_numpy(), y=df_g[classes].to_numpy()):
+        
+    for train_index, test_index in sss.split(X=df_g[SMILES].to_numpy(), y=np.nan_to_num(df_g[classes].to_numpy())):
         df_ex = df_g.iloc[test_index]
         df_g = df_g.iloc[train_index]
         
@@ -125,19 +125,21 @@ if df_ex is not None:
     st.sidebar.download_button("Download excluded data file", data=csv_ex, file_name=f'excluded_{study}.csv', mime='text/csv')
 
 chem_list = [Chem.MolFromSmiles(smiles) for smiles in df_g.SMILES]
-excluded_descriptors = None
+excluded_descriptors = ['Ipc']
 X = get_all_descriptors(chem_list, radius=RADIUS, fp_size=FP_SIZE, descriptor_sel=X_desc, reduced=True, excluded_descriptors=excluded_descriptors)
 # X is DataFrame at this point
 X_cols = X.columns
 
-X_scaler = preprocessing.StandardScaler().fit(X)
-X = X_scaler.transform(X)   # X is ndarray at this point
+# X_scaler = preprocessing.StandardScaler().fit(X)
+# X = X_scaler.transform(X)   # X is ndarray at this point
+X = X.values  # do not scale, get values directly
+
 y = df_g[classes].values
 
 # Any null values in X ????
-X_df = pd.DataFrame(data=X, columns=X_cols)
+# X_df = pd.DataFrame(data=X, columns=X_cols)
 
-# if X_df.isnull().any().any():
+# if X_df.isinf().any().any():
 #     print(f"Found {X_df.isnull().sum().sum()} NaN values!")
 #     nan_positions = np.argwhere(X_df.isnull().values)
 #     print(nan_positions)
@@ -159,7 +161,7 @@ elif algorithm == MODEL_L4:
 # model.to(device)
 
 app_vars = AppVars(login_name=login_name, is_admin=login_name in env.admins,study=study,dataset_shape=X.shape, classes=classes)
-model_desc = ModelDesc(X_desc, X_cols, X_scaler, algorithm, model)
+model_desc = ModelDesc(X_desc=X_desc, X_cols=X_cols, model_class=algorithm, model=model)
 dataset = TensorDataset(torch.tensor(X, dtype=torch.float32), torch.tensor(y, dtype=torch.float32))
 
 # save them to session state

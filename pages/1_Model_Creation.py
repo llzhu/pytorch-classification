@@ -11,6 +11,7 @@ from iterstrat.ml_stratifiers import MultilabelStratifiedShuffleSplit
 from timeit import default_timer as timer
 from datetime import timedelta
 import io
+from sklearn import preprocessing
 
 
 # start = timer()
@@ -104,26 +105,27 @@ y_np_filled = np.nan_to_num(y_np, nan=0.0)
 
 for split_idx, (train_idx, test_idx) in enumerate(sss.split(X_np, y_np_filled)):
 
+    X_train, X_test = X_np[train_idx], X_np[test_idx]
+    y_train, y_test = y_np[train_idx], y_np[test_idx]
 
-    # Create subsets for this specific fold
-    train_subset = Subset(dataset, train_idx)
-    test_subset = Subset(dataset, test_idx)      
-
-    X_train_tensor = train_subset.dataset.tensors[0][train_subset.indices]
-    y_train_tensor = train_subset.dataset.tensors[1][train_subset.indices]
-    X_test_tensor = test_subset.dataset.tensors[0][test_subset.indices]
-    y_test_tensor = test_subset.dataset.tensors[1][test_subset.indices]
-
+    X_scaler = preprocessing.StandardScaler().fit(X_train)
+    X_train = X_scaler.transform(X_train)
+    X_test = X_scaler.transform(X_test)
     
     if model_class in [MODEL_L3, MODEL_L4]:
         criterion = nn.BCEWithLogitsLoss(pos_weight=torch.tensor(float(pos_weight)))
         optimizer = torch.optim.Adam(model.parameters(), lr=float(lr))
 
-        torch_train_batch(model, criterion, optimizer, int(epochs), train_subset.dataset, int(batch_size))
+        torch_train_batch(model, 
+                          criterion, 
+                          optimizer, 
+                          int(epochs), 
+                          TensorDataset(torch.tensor(X_train, dtype=torch.float32), torch.tensor(y_train, dtype=torch.float32)), 
+                          int(batch_size))
 
         # model.eval()
           
-        test_dataset = TensorDataset(X_test_tensor, y_test_tensor)
+        test_dataset = TensorDataset(torch.tensor(X_test, dtype=torch.float32), torch.tensor(y_test, dtype=torch.float32))
         test_dataloader = DataLoader(test_dataset, shuffle=False)
         
         all_preds, all_targets = evaluate_model(model, test_dataloader)
@@ -145,10 +147,14 @@ for split_idx, (train_idx, test_idx) in enumerate(sss.split(X_np, y_np_filled)):
         #     if torch.isnan(param).any():
         #         print(f"{name} contains NaN")
 
-        torch_train_batch(model, criterion, optimizer, int(epochs), train_subset.dataset, int(batch_size))
+        torch_train_batch(model, 
+                          criterion, 
+                          optimizer, 
+                          int(epochs), 
+                          TensorDataset(torch.tensor(X_train, dtype=torch.float32), torch.tensor(y_train, dtype=torch.float32)), 
+                          int(batch_size))
 
-        # model.eval()
-        test_dataset = TensorDataset(X_test_tensor, y_test_tensor)
+        test_dataset = TensorDataset(torch.tensor(X_test, dtype=torch.float32), torch.tensor(y_test, dtype=torch.float32))
         test_dataloader = DataLoader(test_dataset, shuffle=False)
         
         all_preds, all_targets = evaluate_model(model, test_dataloader)
@@ -160,6 +166,10 @@ for split_idx, (train_idx, test_idx) in enumerate(sss.split(X_np, y_np_filled)):
 
 exe_empty.write("Training with whole dataset ...")
 # Train with the whole dataset and save it to S3
+
+X_scaler = preprocessing.StandardScaler().fit(X_np)
+X_np = X_scaler.transform(X_np)
+
 if model_class in [MODEL_L3, MODEL_L4]:
     criterion = nn.BCEWithLogitsLoss(pos_weight=torch.tensor(float(pos_weight)))
 
@@ -167,11 +177,16 @@ elif model_class == MODEL_MULTI:
     criterion = MaskedBCEWithLogitsLoss(pos_weight=torch.tensor(float(pos_weight)))
 
 optimizer = torch.optim.Adam(model.parameters(), lr=float(lr))
-torch_train_batch(model, criterion, optimizer, int(epochs), dataset, int(batch_size))
-
+torch_train_batch(model, 
+                  criterion, 
+                  optimizer, 
+                  int(epochs), 
+                  TensorDataset(torch.tensor(X_np, dtype=torch.float32), torch.tensor(y_np, dtype=torch.float32)), 
+                  int(batch_size))
 
 
 model.to('cpu')
+model_desc.X_scaler = X_scaler
 model_desc.model = model   # populate model_desc with trained model
 
 # key_prefix = f'{app_vars.login_name}/{env.app_data}/{app_vars.study}/{model_class}/{model_desc.X_desc}'
