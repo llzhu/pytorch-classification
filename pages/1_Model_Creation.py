@@ -163,6 +163,9 @@ for split_idx, (train_idx, test_idx) in enumerate(sss.split(X_np, y_np_filled)):
         all_preds, all_targets = evaluate_model(model, test_dataloader)
 
         st_multitask_results(all_preds, all_targets, classes)
+
+        del model, optimizer
+        torch.cuda.empty_cache()
     
     summery_empty.progress((split_idx+1)/int(n_splits))
     st.write('***')
@@ -173,15 +176,16 @@ exe_empty.write("Training with whole dataset ...")
 X_scaler = preprocessing.StandardScaler().fit(X_np)
 X_np = X_scaler.transform(X_np)
 
+model = model_factory(model_class, input_dim=len(model_desc.X_cols))
+model.to(DEVICE)
+optimizer = torch.optim.Adam(model.parameters(), lr=float(lr))
+
 if model_class in [MODEL_L3, MODEL_L4]:
     criterion = nn.BCEWithLogitsLoss(pos_weight=torch.tensor(float(pos_weight)))
 
 elif model_class == MODEL_MULTI:
     criterion = MaskedBCEWithLogitsLoss(pos_weight=torch.tensor(float(pos_weight)))
 
-# No need to re-initialize model; current model from last fold training might be helpful
-
-optimizer = torch.optim.Adam(model.parameters(), lr=float(lr))
 torch_train_batch(model, 
                   criterion, 
                   optimizer, 
