@@ -370,7 +370,7 @@ def masked_bce_loss_fn(predictions, targets):
     return torch.sum(masked_loss) / num_valid_points
 
 class MultiTaskNet(nn.Module):
-    def __init__(self, input_dim=1024, num_tasks=12, dim1=512, dim2=256):
+    def __init__(self, input_dim, num_tasks=12, dim1=512, dim2=256):
         super().__init__()
         
         # 1. Shared Base Network (Learns general chemical features)
@@ -409,7 +409,24 @@ class MultiTaskNet(nn.Module):
         return stacked_outputs
 
 
+def model_factory(model_class: str, **kwargs):
+    """
+    Returns an instantiated sklearn model based on a keyword.
+    Accepts arbitrary keyword arguments (**kwargs) to pass to the model.
+    """
+    # Map keywords to the actual, uninstantiated classes
+    models = {
+        MODEL_L3: L3Model,
+        MODEL_L4: L4Model,
+        MODEL_MULTI: MultiTaskNet,
+    }
     
+    if model_class not in models:
+        raise ValueError(f"Unknown model type '{model_class}'. Choose from {list(models.keys())}")
+        
+    # Instantiate and return the model with any provided hyperparameters
+    return models[model_class](**kwargs)
+
 # criterion = nn.MSELoss() for regression
 # criterion = nn.BCELoss() or nn.BCEWithLogitsLoss() for 0/1 classification
 # criteria - nn.CrossEntropyLoss() for multi-classifications
@@ -597,7 +614,7 @@ def get_rdkit_fp(morgan_gen, mol_list):
 
 def get_rdkit_descriptors(mol_list, excluded_descriptors = None):
     descriptor_names = [x[0] for x in Descriptors._descList]
-    
+
     if excluded_descriptors:
         descriptor_names = [d for d in descriptor_names if d not in excluded_descriptors]
     calc = MoleculeDescriptors.MolecularDescriptorCalculator(descriptor_names)

@@ -46,8 +46,8 @@ if 'dataset' in st.session_state:
 
 model_class = model_desc.model_class
 classes = app_vars.classes
-model = model_desc.model
-model.to(DEVICE)
+# model = model_desc.model
+# model.to(DEVICE)
 X_tensor, y_tensor = dataset.tensors
 
 save_to_master = False
@@ -113,6 +113,8 @@ for split_idx, (train_idx, test_idx) in enumerate(sss.split(X_np, y_np_filled)):
     X_test = X_scaler.transform(X_test)
     
     if model_class in [MODEL_L3, MODEL_L4]:
+        model = model_factory(model_class, input_dim=len(model_desc.X_cols))
+        model.to(DEVICE)
         criterion = nn.BCEWithLogitsLoss(pos_weight=torch.tensor(float(pos_weight)))
         optimizer = torch.optim.Adam(model.parameters(), lr=float(lr))
 
@@ -139,7 +141,8 @@ for split_idx, (train_idx, test_idx) in enumerate(sss.split(X_np, y_np_filled)):
             st_confusion_matrix(all_targets, all_preds)
 
     elif model_class == MODEL_MULTI:
-        
+        model = model_factory(model_class, input_dim=len(model_desc.X_cols))
+        model.to(DEVICE)
         criterion = MaskedBCEWithLogitsLoss(pos_weight=torch.tensor(float(pos_weight)))
         optimizer = torch.optim.Adam(model.parameters(), lr=float(lr))
        
@@ -175,6 +178,8 @@ if model_class in [MODEL_L3, MODEL_L4]:
 
 elif model_class == MODEL_MULTI:
     criterion = MaskedBCEWithLogitsLoss(pos_weight=torch.tensor(float(pos_weight)))
+
+# No need to re-initialize model; current model from last fold training might be helpful
 
 optimizer = torch.optim.Adam(model.parameters(), lr=float(lr))
 torch_train_batch(model, 

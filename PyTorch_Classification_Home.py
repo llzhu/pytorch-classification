@@ -149,19 +149,19 @@ y = df_g[classes].values
 #     print(X.max())
 
 
-if algorithm == MODEL_MULTI:
-    model = MultiTaskNet(input_dim=len(X_cols), num_tasks=len(classes), dim1=128, dim2=64)
+# if algorithm == MODEL_MULTI:
+#     model = MultiTaskNet(input_dim=len(X_cols), num_tasks=len(classes), dim1=128, dim2=64)
 
-elif algorithm == MODEL_L3:
-    model = L3Model(input_dim=len(X_cols), dim1=512, dim2=64, output_dim=1)
+# elif algorithm == MODEL_L3:
+#     model = L3Model(input_dim=len(X_cols), dim1=512, dim2=64, output_dim=1)
 
-elif algorithm == MODEL_L4:
-    model = L4Model(input_dim=len(X_cols), dim1=512, dim2=128, dim3=32, output_dim=1)
+# elif algorithm == MODEL_L4:
+#     model = L4Model(input_dim=len(X_cols), dim1=512, dim2=128, dim3=32, output_dim=1)
 
 # model.to(device)
 
 app_vars = AppVars(login_name=login_name, is_admin=login_name in env.admins,study=study,dataset_shape=X.shape, classes=classes)
-model_desc = ModelDesc(X_desc=X_desc, X_cols=X_cols, model_class=algorithm, model=model)
+model_desc = ModelDesc(X_desc=X_desc, X_cols=X_cols, model_class=algorithm)
 dataset = TensorDataset(torch.tensor(X, dtype=torch.float32), torch.tensor(y, dtype=torch.float32))
 
 # save them to session state
