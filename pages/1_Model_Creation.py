@@ -132,6 +132,8 @@ for split_idx, (train_idx, test_idx) in enumerate(sss.split(X_np, y_np_filled)):
         
         all_preds, all_targets = evaluate_model(model, test_dataloader)
 
+        del model, optimizer
+        torch.cuda.empty_cache()
 
         c1, c2 = st.columns(2)
         with c1:
@@ -146,9 +148,6 @@ for split_idx, (train_idx, test_idx) in enumerate(sss.split(X_np, y_np_filled)):
         criterion = MaskedBCEWithLogitsLoss(pos_weight=torch.tensor(float(pos_weight)))
         optimizer = torch.optim.Adam(model.parameters(), lr=float(lr))
        
-        # for name, param in model.named_parameters():
-        #     if torch.isnan(param).any():
-        #         print(f"{name} contains NaN")
 
         torch_train_batch(model, 
                           criterion, 
@@ -162,11 +161,12 @@ for split_idx, (train_idx, test_idx) in enumerate(sss.split(X_np, y_np_filled)):
         
         all_preds, all_targets = evaluate_model(model, test_dataloader)
 
-        st_multitask_results(all_preds, all_targets, classes)
-
         del model, optimizer
         torch.cuda.empty_cache()
-    
+
+        st_multitask_results(all_preds, all_targets, classes)
+
+        
     summery_empty.progress((split_idx+1)/int(n_splits))
     st.write('***')
 

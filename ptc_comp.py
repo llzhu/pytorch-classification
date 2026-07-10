@@ -261,7 +261,7 @@ def st_multitask_results_single(all_preds, all_targets, classes, task_idx):
 
 def st_multitask_results(all_preds, all_targets, classes):
     # num_tasks = len(classes)
-    ic(classes)
+    # ic(classes)
     tab1,tab2,tab3,tab4,tab5,tab6,tab7,tab8,tab9,tab10,tab11,tab12 = st.tabs(classes)
 
     with tab1:
