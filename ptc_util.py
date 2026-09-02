@@ -67,6 +67,10 @@ def get_from_s3(bucket, key):
 
     return data_obj
 
+def delete_s3_contents(bucket_name, prefix):
+    bucket = s3resource.Bucket(bucket_name)
+    bucket.objects.filter(Prefix=prefix).delete()
+
 def any_contents(bucket, prefix):
     response = s3client.list_objects_v2(
         Bucket=bucket,
